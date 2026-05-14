@@ -16,10 +16,12 @@ Complete guide to Piper's syntax and built-in functions.
 8. [Conditionals](#8-conditionals)
 9. [Loops](#9-loops)
 10. [Functions](#10-functions)
-11. [List Comprehensions](#11-list-comprehensions)
-12. [Pipe Operator](#12-pipe-operator)
-13. [Error Handling](#13-error-handling)
-14. [Built-in Functions](#14-built-in-functions)
+11. [Case / Of](#11-case--of)
+12. [Tuples & Unpacking](#12-tuples--unpacking)
+13. [List Comprehensions](#13-list-comprehensions)
+14. [Pipe Operator](#14-pipe-operator)
+15. [Error Handling](#15-error-handling)
+16. [Built-in Functions](#16-built-in-functions)
 
 ---
 
@@ -283,6 +285,30 @@ for item in ["a", "b", "c"]:
     print(item)
 ```
 
+### `..` range (inclusive)
+
+A cleaner alternative to `range()` — `a..b` includes both endpoints.
+
+```python
+for i in 1..5:
+    print(i)        # 1 2 3 4 5
+
+for i in 0..9:
+    print(i)        # 0 1 2 3 4 5 6 7 8 9
+
+# Works in list comprehensions too
+let squares = [i * i for i in 1..6]   # [1, 4, 9, 16, 25, 36]
+
+let n = 10
+let total = sum([i for i in 1..n])     # 55
+```
+
+| Syntax | Equivalent | Result |
+|---|---|---|
+| `1..5` | `range(1, 6)` | `[1, 2, 3, 4, 5]` |
+| `0..9` | `range(0, 10)` | `[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]` |
+| `a..b` | `range(a, b+1)` | `a` to `b` inclusive |
+
 ### While loop
 ```python
 let i = 0
@@ -342,9 +368,111 @@ fn apply(f, x): return f(x)
 print(apply(square, 5))  # 25
 ```
 
+### `result` implicit return
+
+Instead of `return val`, assign to the special variable `result`. It is automatically returned when the function ends.
+
+```python
+fn square(x):
+    result = x * x       # no return needed
+
+fn running_total(nums):
+    result = 0
+    for n in nums:
+        result += n      # build up result, return at end
+
+fn classify(score):
+    if score >= 90:   result = "A"
+    elif score >= 75: result = "B"
+    elif score >= 60: result = "C"
+    else:             result = "F"
+
+print(square(7))              # 49
+print(running_total([1..5]))  # 15
+print(classify(82))           # B
+```
+
+> `return` still works and takes priority over `result` if both are used.
+
 ---
 
-## 11. List Comprehensions
+## 11. Case / Of
+
+A cleaner alternative to long `if / elif` chains — match a value against a list of patterns.
+
+```python
+case activation:
+    of "relu":    return relu(z)
+    of "sigmoid": return sigmoid(z)
+    of "tanh":    return tanh(z)
+    else:         return z
+```
+
+```python
+# Multi-line branch bodies work too
+case command:
+    of "train":
+        print("Starting training...")
+        result = train(X, y)
+    of "eval":
+        print("Evaluating...")
+        result = evaluate(X, y)
+    else:
+        print("Unknown command: " + command)
+```
+
+```python
+# Works with numbers
+case status_code:
+    of 200: print("OK")
+    of 404: print("Not found")
+    of 500: print("Server error")
+    else:   print("Unknown: " + str(status_code))
+```
+
+**Rules:**
+- `of` branches are checked top to bottom; first match wins
+- `else` is optional and catches everything unmatched
+- `else` must be the last branch
+
+---
+
+## 12. Tuples & Unpacking
+
+Functions can return multiple values as a tuple `(a, b)`. Use `let (a, b) = ...` to unpack them.
+
+```python
+# Return a tuple
+fn min_max(data):
+    return (min(data), max(data))
+
+# Unpack on the left side
+let (lo, hi) = min_max([3, 1, 9, 2, 7])
+print(lo)   # 1
+print(hi)   # 9
+```
+
+```python
+# Useful for ML — return loss and accuracy together
+fn train_step(X, y):
+    let loss = mean([v * v for v in X])
+    let acc  = round(1.0 - loss, 3)
+    return (loss, acc)
+
+let (loss, acc) = train_step(X, y)
+print("loss=" + str(loss) + "  acc=" + str(acc))
+```
+
+```python
+# Tuple literal — also just a list under the hood
+let point = (3.0, 4.0)
+let (x, y) = point
+print(sqrt(x*x + y*y))   # 5.0
+```
+
+---
+
+## 13. List Comprehensions
 
 ```python
 # Basic
@@ -359,11 +487,15 @@ let evens = [x for x in range(1, 11) if x % 2 == 0]
 let words = ["hello", "world"]
 let upper_words = [upper(w) for w in words]
 # ["HELLO", "WORLD"]
+
+# With .. range
+let cubes = [i * i * i for i in 1..5]
+# [1, 8, 27, 64, 125]
 ```
 
 ---
 
-## 12. Pipe Operator
+## 14. Pipe Operator
 
 Chain function calls left to right — the output of each step becomes the first argument of the next.
 
@@ -383,7 +515,7 @@ let result = data |> normalize |> mean
 
 ---
 
-## 13. Error Handling
+## 15. Error Handling
 
 ```python
 # Basic try / except
@@ -410,7 +542,7 @@ fn safe_divide(a, b):
 
 ---
 
-## 14. Built-in Functions
+## 16. Built-in Functions
 
 ### I/O
 | Function | Description |
@@ -521,4 +653,4 @@ fn safe_divide(a, b):
 
 ---
 
-*For runnable examples see [`examples/demo.piper`](examples/demo.piper) and [`examples/ai_demo.piper`](examples/ai_demo.piper).*
+*For runnable examples see [`examples/demo.piper`](examples/demo.piper), [`examples/ai_demo.piper`](examples/ai_demo.piper), and [`examples/nim_features_test.piper`](examples/nim_features_test.piper).*

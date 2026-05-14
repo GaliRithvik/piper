@@ -2,7 +2,7 @@
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.4.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.5.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions in one place.
 
@@ -52,8 +52,12 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 - **Negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
 - **Slicing** — `arr[1:4]`, `s[:3]`, `arr[-3:]`, `arr[1:-1]`
 - **Default parameters** — `fn greet(name, msg="Hello"):`
+- **`..` range syntax** — `for i in 1..10` instead of `range(1, 11)`
+- **`case / of`** — clean pattern matching, replaces long `if/elif` chains
+- **Tuple unpacking** — `let (loss, acc) = train(X, y)`
+- **`result` implicit return** — set `result = x` instead of `return x`
 - **Short print** — `p(Hello World);` instead of `print("Hello World")`
-- **Rust-powered** — fast tree-walk interpreter
+- **Rust-powered** — fast tree-walk interpreter (~2× faster than CPython)
 
 ---
 
@@ -104,6 +108,26 @@ try:
     let x = arr[99]
 except err:
     print(err)   # Index 99 out of bounds
+
+# .. range (inclusive)
+for i in 1..5:
+    print(i)     # 1 2 3 4 5
+
+# case / of pattern matching
+case activation:
+    of "relu":    return relu(z)
+    of "sigmoid": return sigmoid(z)
+    else:         return z
+
+# Tuple unpacking — multiple return values
+fn min_max(data): return (min(data), max(data))
+let (lo, hi) = min_max([3, 1, 9, 2])
+
+# result implicit return
+fn classify(score):
+    if score >= 90: result = "A"
+    elif score >= 75: result = "B"
+    else: result = "C"
 
 # AI activations
 let z = [-2, -1, 0, 1, 2]
@@ -228,6 +252,12 @@ piper/
 ---
 
 ## Changelog
+
+### v0.5.0
+- Added **`..` range syntax** — `for i in 1..10` (inclusive, Nim-inspired)
+- Added **`case / of`** — pattern matching, cleaner than `if/elif` chains
+- Added **tuple unpacking** — `let (a, b) = fn()` and `(x, y)` tuple literals
+- Added **`result` implicit return** — set `result = val` instead of `return val`
 
 ### v0.4.0
 - Added **negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
