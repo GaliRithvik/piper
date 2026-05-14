@@ -201,11 +201,17 @@
 <script type="module">
   import init, { run_piper } from './pkg/piper.js';
 
-  await init();
-  window._piperReady = true;
-  window._runPiper = run_piper;
-  document.getElementById('output').textContent = 'Piper is ready. Write some code and click Run!';
-  document.getElementById('output').className = '';
+  try {
+    await init();
+    window._piperReady = true;
+    window._runPiper = run_piper;
+    document.getElementById('output').textContent = 'Piper is ready. Write some code and click Run!';
+    document.getElementById('output').className = '';
+  } catch (e) {
+    document.getElementById('output').textContent = 'Failed to load Piper: ' + e.message;
+    document.getElementById('output').className = 'error';
+    console.error('Piper WASM init failed:', e);
+  }
 </script>
 
 <script>
