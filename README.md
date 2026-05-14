@@ -4,6 +4,8 @@ Piper is a programming language with Python-like syntax and a Rust backend, desi
 
 ![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.3.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
+📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions in one place.
+
 ---
 
 ## Quick Start
