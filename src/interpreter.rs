@@ -4,6 +4,32 @@ use std::cell::RefCell;
 use std::cell::Cell;
 use crate::parser::{Stmt, Expr, FStringPart, BinOpKind, UnaryOpKind};
 
+// ── Thread-local output buffer (used by WASM; None = print to stdout) ─────────
+
+thread_local! {
+    pub static OUTPUT_BUF: RefCell<Option<Vec<String>>> = RefCell::new(None);
+}
+
+pub fn capture_output<F: FnOnce()>(f: F) -> String {
+    OUTPUT_BUF.with(|b| *b.borrow_mut() = Some(Vec::new()));
+    f();
+    OUTPUT_BUF.with(|b| {
+        b.borrow_mut().take().unwrap_or_default().join("\n")
+    })
+}
+
+macro_rules! piper_print {
+    ($line:expr) => {
+        OUTPUT_BUF.with(|b| {
+            let mut buf = b.borrow_mut();
+            match &mut *buf {
+                Some(v) => v.push($line.to_string()),
+                None    => println!("{}", $line),
+            }
+        })
+    };
+}
+
 // ── Thread-local PRNG (Xorshift64 + Box-Muller) ──────────────────────────────
 
 thread_local! {
@@ -629,15 +655,23 @@ impl Interpreter {
             // ── I/O ─────────────────────────────────────────────────────────
             "print" | "p" => {
                 let parts: Vec<String> = args.iter().map(|v| v.to_string()).collect();
-                println!("{}", parts.join(" "));
+                piper_print!(parts.join(" "));
                 Value::Nil
             }
             "input" => {
-                use std::io::{self, Write, BufRead};
-                if let Some(prompt) = args.first() { print!("{}", prompt); io::stdout().flush().ok(); }
-                let mut line = String::new();
-                io::stdin().lock().read_line(&mut line).ok();
-                Value::Str(line.trim_end().to_string())
+                let is_wasm = OUTPUT_BUF.with(|b| b.borrow().is_some());
+                if is_wasm {
+                    if let Some(prompt) = args.first() {
+                        piper_print!(format!("{}", prompt));
+                    }
+                    Value::Str(String::new())
+                } else {
+                    use std::io::{self, Write, BufRead};
+                    if let Some(prompt) = args.first() { print!("{}", prompt); io::stdout().flush().ok(); }
+                    let mut line = String::new();
+                    io::stdin().lock().read_line(&mut line).ok();
+                    Value::Str(line.trim_end().to_string())
+                }
             }
 
             // ── Type conversion ──────────────────────────────────────────────
@@ -1492,12 +1526,12 @@ impl Interpreter {
                     }
                     let label_top = format!("{:.2}", vmax);
                     let label_bot = format!("{:.2}", vmin);
-                    println!("{} ┤", label_top);
+                    piper_print!(format!("{} ┤", label_top));
                     for row in &grid {
-                        println!("     │{}", row.iter().collect::<String>());
+                        piper_print!(format!("     │{}", row.iter().collect::<String>()));
                     }
-                    println!("     └{}", "─".repeat(width));
-                    println!("{} ", label_bot);
+                    piper_print!(format!("     └{}", "─".repeat(width)));
+                    piper_print!(format!("{} ", label_bot));
                     Value::Nil
                 } else { panic!("plot(list)") }
             }
@@ -1516,9 +1550,9 @@ impl Interpreter {
                     let label_w = labels.iter().map(|l| l.len()).max().unwrap_or(0).max(1);
                     for (label, &v) in labels.iter().zip(vals.iter()) {
                         let bar_len = ((v / vmax) * bar_width as f64).round() as usize;
-                        println!("{:>width$} │{} {:.2}", label, "█".repeat(bar_len), v, width = label_w);
+                        piper_print!(format!("{:>width$} │{} {:.2}", label, "█".repeat(bar_len), v, width = label_w));
                     }
-                    println!("{:>width$} └{}", "", "─".repeat(bar_width + 5), width = label_w);
+                    piper_print!(format!("{:>width$} └{}", "", "─".repeat(bar_width + 5), width = label_w));
                     Value::Nil
                 } else { panic!("bar_chart(data, labels)") }
             }

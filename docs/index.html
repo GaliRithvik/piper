@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piper Playground</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a1d2e;
+      border-bottom: 1px solid #2d3148;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #a78bfa;
+      letter-spacing: -0.02em;
+    }
+
+    header span {
+      font-size: 0.75rem;
+      background: #2d3148;
+      color: #94a3b8;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    .run-btn {
+      margin-left: auto;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .run-btn:hover { background: #6d28d9; }
+    .run-btn:disabled { background: #4c1d95; opacity: 0.5; cursor: not-allowed; }
+
+    .examples-bar {
+      background: #13162a;
+      border-bottom: 1px solid #2d3148;
+      padding: 8px 24px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .examples-bar span {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-right: 4px;
+    }
+
+    .example-btn {
+      background: #1e2235;
+      color: #94a3b8;
+      border: 1px solid #2d3148;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .example-btn:hover { background: #2d3148; color: #e2e8f0; }
+
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .pane-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #475569;
+      padding: 8px 16px;
+      background: #13162a;
+      border-bottom: 1px solid #1e2235;
+    }
+
+    .divider {
+      width: 4px;
+      background: #1e2235;
+      cursor: col-resize;
+    }
+    .divider:hover { background: #7c3aed; }
+
+    textarea#editor {
+      flex: 1;
+      background: #0f1117;
+      color: #e2e8f0;
+      border: none;
+      padding: 16px;
+      font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      tab-size: 4;
+    }
+
+    #output {
+      flex: 1;
+      background: #090c14;
+      color: #a3e635;
+      padding: 16px;
+      font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #output.error { color: #f87171; }
+    #output.waiting { color: #475569; font-style: italic; }
+
+    footer {
+      background: #1a1d2e;
+      border-top: 1px solid #2d3148;
+      padding: 8px 24px;
+      font-size: 0.72rem;
+      color: #475569;
+      display: flex;
+      gap: 16px;
+    }
+
+    footer a { color: #7c3aed; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .workspace { flex-direction: column; }
+      .divider { width: 100%; height: 4px; cursor: row-resize; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Piper Playground</h1>
+  <span>v0.1.0</span>
+  <button class="run-btn" id="runBtn" onclick="runCode()">▶ Run</button>
+</header>
+
+<div class="examples-bar">
+  <span>Examples:</span>
+  <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
+  <button class="example-btn" onclick="loadExample('fib')">Fibonacci</button>
+  <button class="example-btn" onclick="loadExample('class')">Classes</button>
+  <button class="example-btn" onclick="loadExample('list')">List Ops</button>
+  <button class="example-btn" onclick="loadExample('pipe')">Pipe |></button>
+  <button class="example-btn" onclick="loadExample('messaging')">Messaging App</button>
+</div>
+
+<div class="workspace">
+  <div class="pane">
+    <div class="pane-label">Editor</div>
+    <textarea id="editor" spellcheck="false" placeholder="Write Piper code here..."></textarea>
+  </div>
+  <div class="divider"></div>
+  <div class="pane">
+    <div class="pane-label">Output</div>
+    <div id="output" class="waiting">Output will appear here after you click Run.</div>
+  </div>
+</div>
+
+<footer>
+  <span>Piper — Python-like syntax, Rust-powered, compiled to WebAssembly</span>
+  <a href="https://github.com/GaliRithvik/piper" target="_blank">GitHub</a>
+  <a href="https://github.com/GaliRithvik/piper/blob/main/LANGUAGE.md" target="_blank">Docs</a>
+</footer>
+
+<script type="module">
+  import init, { run_piper } from './pkg/piper.js';
+
+  await init();
+  window._piperReady = true;
+  window._runPiper = run_piper;
+  document.getElementById('output').textContent = 'Piper is ready. Write some code and click Run!';
+  document.getElementById('output').className = '';
+</script>
+
+<script>
+  const EXAMPLES = {
+    hello: `# Hello, Piper!
+let name = "World"
+print("Hello, " + name + "!")
+
+for i in 1..5:
+    print(f"Count: {i}")`,
+
+    fib: `# Fibonacci sequence
+fn fib(n):
+    if n <= 1: return n
+    return fib(n - 1) + fib(n - 2)
+
+for i in 0..10:
+    print(f"fib({i}) = {fib(i)}")`,
+
+    class: `# Classes in Piper
+class Animal:
+    fn init(self, name, sound):
+        self.name = name
+        self.sound = sound
+
+    fn speak(self):
+        print(f"{self.name} says: {self.sound}!")
+
+let dog = Animal("Dog", "Woof")
+let cat = Animal("Cat", "Meow")
+let cow = Animal("Cow", "Moo")
+
+dog.speak()
+cat.speak()
+cow.speak()`,
+
+    list: `# List operations
+let nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+
+print("Original: " + str(nums))
+print("Sorted:   " + str(sort(nums)))
+print("Sum:      " + str(sum(nums)))
+print("Mean:     " + str(round(mean(nums), 2)))
+print("Min/Max:  " + str(min(nums)) + " / " + str(max(nums)))
+
+let squares = [x * x for x in 1..8]
+print("Squares:  " + str(squares))
+
+let evens = [x for x in nums if x % 2 == 0]
+print("Evens:    " + str(evens))`,
+
+    pipe: `# Pipe operator |>
+fn double(x): return x * 2
+fn add_one(x): return x + 1
+
+# Without pipe
+print(str(sum([1, 2, 3, 4, 5])))
+
+# With pipe
+[1, 2, 3, 4, 5] |> sum |> str |> print
+
+# Chain transformations
+let result = [1, 2, 3, 4, 5]
+    |> sum
+print("Sum via pipe: " + str(result))
+
+# Sort and reverse
+let data = [5, 2, 8, 1, 9, 3]
+let sorted = data |> sort |> reverse
+print("Sorted desc: " + str(sorted))`,
+
+    messaging: `# PiperChat — Messaging App Demo
+class Message:
+    fn init(self, id, sender, recipient, content):
+        self.id = id
+        self.sender = sender
+        self.recipient = recipient
+        self.content = content
+
+    fn display(self):
+        print(f"  [#{self.id}] {self.sender} -> {self.recipient}: {self.content}")
+
+class Chat:
+    fn init(self):
+        self.users = []
+        self.messages = []
+        self.next_id = 1
+
+    fn register(self, name):
+        append(self.users, name)
+        print(f"Registered: {name}")
+
+    fn send(self, sender, recipient, content):
+        let msg = Message(self.next_id, sender, recipient, content)
+        append(self.messages, msg)
+        self.next_id += 1
+        print(f"Sent [#{msg.id}]: {sender} -> {recipient}: {content}")
+
+    fn show_chat(self, u1, u2):
+        print(f"--- {u1} <-> {u2} ---")
+        for msg in self.messages:
+            let fwd = msg.sender == u1 and msg.recipient == u2
+            let rev = msg.sender == u2 and msg.recipient == u1
+            if fwd or rev:
+                msg.display()
+
+let app = Chat()
+app.register("Alice")
+app.register("Bob")
+app.register("Carol")
+print("")
+app.send("Alice", "Bob", "Hey Bob!")
+app.send("Bob", "Alice", "Hi Alice, how are you?")
+app.send("Carol", "Alice", "Are you free tomorrow?")
+app.send("Alice", "Carol", "Yes, let's meet at noon!")
+print("")
+app.show_chat("Alice", "Bob")
+print("")
+app.show_chat("Alice", "Carol")`
+  };
+
+  window.loadExample = function(name) {
+    document.getElementById('editor').value = EXAMPLES[name] || '';
+  };
+
+  window.runCode = async function() {
+    const btn = document.getElementById('runBtn');
+    const out = document.getElementById('output');
+
+    if (!window._piperReady) {
+      out.textContent = 'Piper is still loading, please wait...';
+      out.className = 'waiting';
+      return;
+    }
+
+    const code = document.getElementById('editor').value.trim();
+    if (!code) {
+      out.textContent = 'Nothing to run — write some Piper code first!';
+      out.className = 'waiting';
+      return;
+    }
+
+    btn.disabled = true;
+    out.textContent = 'Running...';
+    out.className = 'waiting';
+
+    try {
+      await new Promise(r => setTimeout(r, 10));
+      const result = window._runPiper(code);
+      out.textContent = result || '(no output)';
+      out.className = result ? '' : 'waiting';
+    } catch (e) {
+      out.textContent = 'Error: ' + e.message;
+      out.className = 'error';
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // Ctrl+Enter / Cmd+Enter to run
+  document.getElementById('editor').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      window.runCode();
+    }
+    // Tab inserts spaces
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.target;
+      const s = ta.selectionStart;
+      ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(ta.selectionEnd);
+      ta.selectionStart = ta.selectionEnd = s + 4;
+    }
+  });
+
+  // Load hello world on start
+  loadExample('hello');
+</script>
+
+</body>
+</html>

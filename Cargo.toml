@@ -7,3 +7,11 @@ description = "Piper — Python-like syntax, Rust-powered interpreter"
 [[bin]]
 name = "piper"
 path = "src/main.rs"
+
+[lib]
+name = "piper"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+wasm-bindgen = "0.2"
