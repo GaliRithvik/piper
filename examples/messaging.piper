@@ -1,0 +1,226 @@
+# ============================================
+#  PiperChat v1.0 — CLI Messaging App
+#  Built with the Piper language
+# ============================================
+
+class Message:
+    fn init(self, id, sender, recipient, content):
+        self.id = id
+        self.sender = sender
+        self.recipient = recipient
+        self.content = content
+
+    fn display(self):
+        print(f"    [#{self.id}] {self.sender} -> {self.recipient}: {self.content}")
+
+
+class MessagingApp:
+    fn init(self):
+        self.users = []
+        self.messages = []
+        self.msg_count = 0
+
+    fn register(self, name):
+        if name in self.users:
+            print(f"  '{name}' is already registered.")
+        else:
+            append(self.users, name)
+            print(f"  Registered user: {name}")
+
+    fn send(self, sender, recipient, content):
+        if sender not in self.users:
+            print(f"  Error: '{sender}' is not registered.")
+            return
+        if recipient not in self.users:
+            print(f"  Error: '{recipient}' is not registered.")
+            return
+        self.msg_count += 1
+        let msg = Message(self.msg_count, sender, recipient, content)
+        append(self.messages, msg)
+        print(f"  Sent [#{self.msg_count}]: {sender} -> {recipient}: {content}")
+
+    fn inbox(self, user):
+        if user not in self.users:
+            print(f"  Error: '{user}' is not registered.")
+            return
+        print("")
+        print(f"  === Inbox for {user} ===")
+        let count = 0
+        for msg in self.messages:
+            if msg.recipient == user:
+                msg.display()
+                count += 1
+        if count == 0:
+            print("  (no messages)")
+        else:
+            print(f"  {count} message(s) received.")
+
+    fn outbox(self, user):
+        if user not in self.users:
+            print(f"  Error: '{user}' is not registered.")
+            return
+        print("")
+        print(f"  === Outbox for {user} ===")
+        let count = 0
+        for msg in self.messages:
+            if msg.sender == user:
+                msg.display()
+                count += 1
+        if count == 0:
+            print("  (no messages sent)")
+        else:
+            print(f"  {count} message(s) sent.")
+
+    fn chat(self, user1, user2):
+        if user1 not in self.users:
+            print(f"  Error: '{user1}' is not registered.")
+            return
+        if user2 not in self.users:
+            print(f"  Error: '{user2}' is not registered.")
+            return
+        print("")
+        print(f"  === Conversation: {user1} <-> {user2} ===")
+        let count = 0
+        for msg in self.messages:
+            let fwd = msg.sender == user1 and msg.recipient == user2
+            let rev = msg.sender == user2 and msg.recipient == user1
+            if fwd or rev:
+                msg.display()
+                count += 1
+        if count == 0:
+            print("  (no messages yet)")
+        else:
+            print(f"  {count} message(s) in conversation.")
+
+    fn delete_msg(self, id):
+        let new_msgs = []
+        let found = false
+        for msg in self.messages:
+            if msg.id == id:
+                found = true
+            else:
+                append(new_msgs, msg)
+        if found:
+            self.messages = new_msgs
+            print(f"  Deleted message #{id}.")
+        else:
+            print(f"  Message #{id} not found.")
+
+    fn list_users(self):
+        if len(self.users) == 0:
+            print("  No users registered yet.")
+        else:
+            print("")
+            print(f"  === Registered Users ({len(self.users)}) ===")
+            for u in self.users:
+                let received = 0
+                let sent = 0
+                for msg in self.messages:
+                    if msg.recipient == u: received += 1
+                    if msg.sender == u:    sent += 1
+                print(f"    - {u}  (sent: {sent}, received: {received})")
+
+    fn stats(self):
+        print("")
+        print("  === PiperChat Stats ===")
+        print(f"  Users:    {len(self.users)}")
+        print(f"  Messages: {self.msg_count}")
+
+
+fn print_help():
+    print("")
+    print("  Commands:")
+    print("  register <name>                  -- register a new user")
+    print("  send <from> <to> <message...>    -- send a message")
+    print("  inbox <user>                     -- view received messages")
+    print("  outbox <user>                    -- view sent messages")
+    print("  chat <user1> <user2>             -- view full conversation")
+    print("  delete <id>                      -- delete a message by ID")
+    print("  users                            -- list registered users and activity")
+    print("  stats                            -- show app statistics")
+    print("  help                             -- show this menu")
+    print("  quit                             -- exit PiperChat")
+
+
+fn run():
+    let app = MessagingApp()
+
+    print("============================================")
+    print("  PiperChat v1.0")
+    print("  A simple messaging app built in Piper")
+    print("============================================")
+    print_help()
+
+    let running = true
+    while running:
+        print("")
+        let line = input("> ")
+        let line = trim(line)
+
+        if len(line) > 0:
+            let parts = split(line, " ")
+            let cmd = parts[0]
+
+            case cmd:
+                of "register":
+                    if len(parts) < 2:
+                        print("  Usage: register <name>")
+                    else:
+                        app.register(parts[1])
+
+                of "send":
+                    if len(parts) < 4:
+                        print("  Usage: send <from> <to> <message...>")
+                    else:
+                        let sender = parts[1]
+                        let recipient = parts[2]
+                        let words = slice(parts, 3, len(parts))
+                        let content = join(" ", words)
+                        app.send(sender, recipient, content)
+
+                of "inbox":
+                    if len(parts) < 2:
+                        print("  Usage: inbox <user>")
+                    else:
+                        app.inbox(parts[1])
+
+                of "outbox":
+                    if len(parts) < 2:
+                        print("  Usage: outbox <user>")
+                    else:
+                        app.outbox(parts[1])
+
+                of "chat":
+                    if len(parts) < 3:
+                        print("  Usage: chat <user1> <user2>")
+                    else:
+                        app.chat(parts[1], parts[2])
+
+                of "delete":
+                    if len(parts) < 2:
+                        print("  Usage: delete <id>")
+                    else:
+                        try:
+                            let id = int(parts[1])
+                            app.delete_msg(id)
+                        except e:
+                            print(f"  Invalid message ID: '{parts[1]}'")
+
+                of "users":
+                    app.list_users()
+
+                of "stats":
+                    app.stats()
+
+                of "help":
+                    print_help()
+
+                of "quit":
+                    print("")
+                    print("  Goodbye! Thanks for using PiperChat.")
+                    running = false
+
+                else:
+                    print(f"  Unknown command: '{cmd}'. Type 'help' for usage.")
+
+run()
