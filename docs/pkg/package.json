@@ -1,0 +1,16 @@
+{
+  "name": "piper",
+  "type": "module",
+  "description": "Piper — Python-like syntax, Rust-powered interpreter",
+  "version": "0.1.0",
+  "files": [
+    "piper_bg.wasm",
+    "piper.js",
+    "piper.d.ts"
+  ],
+  "main": "piper.js",
+  "types": "piper.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
