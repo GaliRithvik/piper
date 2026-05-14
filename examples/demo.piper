@@ -1,0 +1,78 @@
+# ================================
+#  Piper Language Demo
+#  Python-like syntax, Rust-powered
+# ================================
+
+print("Welcome to Piper v0.1!")
+print("")
+
+# --- Variables & arithmetic ---
+let width = 12
+let height = 5
+let area = width * height
+print("Rectangle: " + str(width) + " x " + str(height) + " = " + str(area))
+
+# --- Strings ---
+let lang = "Piper"
+print("Language '" + lang + "' has " + str(len(lang)) + " characters")
+print("")
+
+# --- Conditionals ---
+let temp = 28
+print("Temperature: " + str(temp) + "C")
+if temp > 35:
+    print("Status: Very hot!")
+elif temp > 25:
+    print("Status: Warm and pleasant.")
+elif temp > 15:
+    print("Status: A bit cool.")
+else:
+    print("Status: Cold!")
+print("")
+
+# --- Functions ---
+fn factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+fn is_prime(n):
+    if n < 2:
+        return false
+    let i = 2
+    while i * i <= n:
+        if n % i == 0:
+            return false
+        i = i + 1
+    return true
+
+print("Factorials:")
+for i in range(1, 8):
+    print("  " + str(i) + "! = " + str(factorial(i)))
+print("")
+
+# --- For loop: primes ---
+print("Primes up to 30:")
+let line = "  "
+for n in range(2, 31):
+    if is_prime(n):
+        line = line + str(n) + " "
+print(line)
+print("")
+
+# --- While loop: FizzBuzz ---
+print("FizzBuzz (1-20):")
+let i = 1
+while i <= 20:
+    if i % 15 == 0:
+        print("  FizzBuzz")
+    elif i % 3 == 0:
+        print("  Fizz")
+    elif i % 5 == 0:
+        print("  Buzz")
+    else:
+        print("  " + str(i))
+    i = i + 1
+
+print("")
+print("Done! Piper works.")

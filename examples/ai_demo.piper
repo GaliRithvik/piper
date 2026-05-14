@@ -1,0 +1,143 @@
+# =============================================
+#  Piper v0.2 — AI Programming Demo
+#  Python-like syntax, Rust-powered
+# =============================================
+
+print("=== Piper v0.2 — AI Language Demo ===")
+print("")
+
+# ---- 1. Data & Stats ----
+print("--- 1. Data & Statistics ---")
+let data = [2.5, -1.3, 0.8, 3.7, -0.5, 1.2, -2.1, 4.0]
+print(f"Data:     {data}")
+print(f"Mean:     {mean(data):.4f}")
+print(f"Std:      {std(data):.4f}")
+print(f"Min:      {min(data):.4f}")
+print(f"Max:      {max(data):.4f}")
+print(f"Median:   {median(data):.4f}")
+print("")
+
+# ---- 2. List Comprehensions ----
+print("--- 2. List Comprehensions ---")
+let squares   = [x ** 2 for x in range(1, 6)]
+let evens     = [x for x in range(1, 11) if x % 2 == 0]
+let norm_data = [round(x / max(data), 4) for x in data]
+print(f"Squares 1-5:  {squares}")
+print(f"Evens 1-10:   {evens}")
+print(f"Normalized:   {norm_data}")
+print("")
+
+# ---- 3. Activation Functions ----
+print("--- 3. Activation Functions ---")
+let z = [-2.0, -1.0, 0.0, 1.0, 2.0]
+print(f"Input z:      {z}")
+print(f"ReLU(z):      {relu(z)}")
+print(f"Sigmoid(z):   {sigmoid(z)}")
+print(f"Tanh(z):      {tanh(z)}")
+let logits = [1.5, 0.8, 2.3, -0.4]
+let probs = softmax(logits)
+print(f"Logits:       {logits}")
+print(f"Softmax:      {probs}")
+print(f"Predicted:    class {argmax(probs)}")
+print("")
+
+# ---- 4. Vector Operations ----
+print("--- 4. Vector Ops ---")
+let a = [1.0, 2.0, 3.0]
+let b = [4.0, 5.0, 6.0]
+print(f"a = {a}")
+print(f"b = {b}")
+print(f"dot(a,b)  = {dot(a, b)}")
+print(f"vadd(a,b) = {vadd(a, b)}")
+print(f"vscale(a,2) = {vscale(a, 2.0)}")
+print(f"norm(a)   = {norm(a):.4f}")
+print(f"normalize(a) = {normalize(a)}")
+print("")
+
+# ---- 5. Matrix Operations ----
+print("--- 5. Matrix Operations ---")
+let A = [[1.0, 2.0], [3.0, 4.0]]
+let B = [[5.0, 6.0], [7.0, 8.0]]
+let C = matmul(A, B)
+let T = transpose(A)
+print(f"A      = {A}")
+print(f"B      = {B}")
+print(f"A @ B  = {C}")
+print(f"A.T    = {T}")
+print(f"eye(3) = {identity(3)}")
+print("")
+
+# ---- 6. Neural Network Layer ----
+print("--- 6. Neural Network Forward Pass ---")
+
+fn linear(x, w, b):
+    return dot(x, w) + b
+
+fn relu_fn(x):
+    if x > 0.0:
+        return x
+    return 0.0
+
+fn dense_layer(inputs, weights, bias):
+    let z = linear(inputs, weights, bias)
+    return sigmoid(z)
+
+let X = [0.5, 0.3, -0.8, 1.2]
+let W = [0.4, -0.2, 0.7, -0.5]
+let b = 0.1
+
+let z_out = linear(X, W, b)
+let a_out = sigmoid(z_out)
+print(f"Input:      {X}")
+print(f"Weights:    {W}")
+print(f"z = W·x+b: {z_out:.4f}")
+print(f"a = σ(z):  {a_out:.4f}")
+print("")
+
+# ---- 7. Pipe Operator |> ----
+print("--- 7. Pipe Operator |> ---")
+let raw = [3.0, 1.0, 4.0, 1.5, 9.0, 2.6, 5.0, 3.5]
+let pipeline_mean = raw |> normalize |> mean
+let pipeline_std  = raw |> sort |> std
+print(f"Raw:                   {raw}")
+print(f"raw |> normalize |> mean = {pipeline_mean:.6f}")
+print(f"raw |> sort |> std       = {pipeline_std:.4f}")
+print("")
+
+# ---- 8. Loss Functions ----
+print("--- 8. Loss Functions ---")
+let y_true = [1.0, 0.0, 1.0, 1.0, 0.0]
+let y_pred = [0.9, 0.1, 0.8, 0.7, 0.2]
+let loss_mse = mse(y_pred, y_true)
+let loss_ce  = cross_entropy(y_pred, y_true)
+print(f"y_true: {y_true}")
+print(f"y_pred: {y_pred}")
+print(f"MSE:           {loss_mse:.6f}")
+print(f"Cross-entropy: {loss_ce:.6f}")
+print("")
+
+# ---- 9. Numpy-like Arrays ----
+print("--- 9. Numpy-style Arrays ---")
+let x_lin = linspace(0.0, 1.0, 6)
+let x_sin = [round(sin(x), 4) for x in x_lin]
+print(f"linspace(0,1,6):     {x_lin}")
+print(f"sin(linspace(0,1,6)): {x_sin}")
+print(f"zeros(4):            {zeros(4)}")
+print(f"ones(3):             {ones(3)}")
+print(f"reshape([1..6], 2,3): {reshape([1,2,3,4,5,6], 2, 3)}")
+print("")
+
+# ---- 10. Higher-order functions ----
+print("--- 10. Higher-order Functions ---")
+fn square(x): return x * x
+fn is_positive(x): return x > 0.0
+
+let nums = [-3.0, -1.0, 0.0, 2.0, 4.0, -2.0, 6.0]
+let squared   = map(nums, square)
+let positives = filter(nums, is_positive)
+print(f"nums:               {nums}")
+print(f"map(square):        {squared}")
+print(f"filter(positive):   {positives}")
+print("")
+
+print("=== Piper v0.2 — Built for AI ===")
