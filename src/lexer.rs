@@ -17,6 +17,7 @@ pub enum Token {
     None,
     Break, Continue,
     Try, Except,
+    Case, Of,
 
     // Operators
     Plus, Minus, Star, Slash, Percent, StarStar,
@@ -24,6 +25,7 @@ pub enum Token {
     Eq, NotEq, Lt, Gt, LtEq, GtEq,
     Assign,
     Pipe,
+    DotDot,
 
     // Punctuation
     LParen, RParen,
@@ -93,7 +95,10 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
             '}' => { tokens.push(Token::RBrace); i += 1; }
             ',' => { tokens.push(Token::Comma); i += 1; }
             ':' => { tokens.push(Token::Colon); i += 1; }
-            '.' => { tokens.push(Token::Dot); i += 1; }
+            '.' => {
+                if i + 1 < chars.len() && chars[i+1] == '.' { tokens.push(Token::DotDot); i += 2; }
+                else { tokens.push(Token::Dot); i += 1; }
+            }
             ';' => { i += 1; } // semicolons are optional statement terminators
 
             '+' => {
@@ -146,7 +151,15 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
 
             c if c.is_ascii_digit() => {
                 let start = i;
-                while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') { i += 1; }
+                while i < chars.len() {
+                    if chars[i].is_ascii_digit() { i += 1; }
+                    else if chars[i] == '.' {
+                        // Stop at '..' (range operator), only consume '.' if followed by a digit
+                        if i + 1 < chars.len() && chars[i+1] == '.' { break; }
+                        if i + 1 < chars.len() && chars[i+1].is_ascii_digit() { i += 1; }
+                        else { break; }
+                    } else { break; }
+                }
                 let num: String = chars[start..i].iter().collect();
                 tokens.push(Token::Number(num.parse().unwrap()));
             }
@@ -196,6 +209,8 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
                         "continue" => Token::Continue,
                         "try"      => Token::Try,
                         "except"   => Token::Except,
+                        "case"     => Token::Case,
+                        "of"       => Token::Of,
                         "true"     => Token::Bool(true),
                         "false"    => Token::Bool(false),
                         "none" | "null" | "nil" => Token::None,

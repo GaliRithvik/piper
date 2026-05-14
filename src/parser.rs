@@ -38,6 +38,7 @@ pub enum Expr {
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Let        { name: String, value: Expr },
+    LetTuple   { names: Vec<String>, value: Expr },
     Assign     { name: String, value: Expr },
     IndexAssign{ name: String, index: Expr, value: Expr },
     If {
@@ -53,6 +54,7 @@ pub enum Stmt {
     Break,
     Continue,
     Try    { body: Vec<Stmt>, except_var: Option<String>, handler: Vec<Stmt> },
+    Case   { expr: Expr, branches: Vec<(Expr, Vec<Stmt>)>, else_body: Option<Vec<Stmt>> },
     Expr(Expr),
 }
 
@@ -133,6 +135,7 @@ impl Parser {
             Token::While    => self.parse_while(),
             Token::For      => self.parse_for(),
             Token::Try      => self.parse_try(),
+            Token::Case     => self.parse_case(),
             Token::Break    => {
                 self.advance();
                 if matches!(self.peek(), Token::Newline) { self.advance(); }
@@ -153,7 +156,21 @@ impl Parser {
     }
 
     fn parse_let(&mut self) -> Stmt {
-        self.advance();
+        self.advance(); // consume 'let'
+        // Tuple destructuring: let (a, b) = expr
+        if matches!(self.peek(), Token::LParen) {
+            self.advance(); // consume '('
+            let mut names = Vec::new();
+            while !matches!(self.peek(), Token::RParen | Token::EOF) {
+                if let Token::Ident(n) = self.advance() { names.push(n); }
+                if matches!(self.peek(), Token::Comma) { self.advance(); }
+            }
+            self.expect(&Token::RParen);
+            self.expect(&Token::Assign);
+            let value = self.parse_expr();
+            if matches!(self.peek(), Token::Newline) { self.advance(); }
+            return Stmt::LetTuple { names, value };
+        }
         let name = match self.advance() {
             Token::Ident(n) => n,
             t => panic!("Expected name after 'let', got {:?}", t),
@@ -259,6 +276,35 @@ impl Parser {
         };
         let handler = self.parse_block();
         Stmt::Try { body, except_var, handler }
+    }
+
+    fn parse_case(&mut self) -> Stmt {
+        self.advance(); // consume 'case'
+        let expr = self.parse_expr();
+        self.expect(&Token::Colon);
+        if matches!(self.peek(), Token::Newline) { self.advance(); }
+        self.expect(&Token::Indent);
+        self.skip_newlines();
+        let mut branches: Vec<(Expr, Vec<Stmt>)> = Vec::new();
+        let mut else_body: Option<Vec<Stmt>> = None;
+        while !matches!(self.peek(), Token::Dedent | Token::EOF) {
+            if matches!(self.peek(), Token::Of) {
+                self.advance(); // consume 'of'
+                let pattern = self.parse_expr();
+                let body = self.parse_block();
+                branches.push((pattern, body));
+            } else if matches!(self.peek(), Token::Else) {
+                self.advance(); // consume 'else'
+                else_body = Some(self.parse_block());
+                self.skip_newlines();
+                break;
+            } else {
+                break;
+            }
+            self.skip_newlines();
+        }
+        if matches!(self.peek(), Token::Dedent) { self.advance(); }
+        Stmt::Case { expr, branches, else_body }
     }
 
     fn parse_ident_stmt(&mut self) -> Stmt {
@@ -387,13 +433,29 @@ impl Parser {
         l
     }
 
-    fn parse_comparison(&mut self) -> Expr {
+    fn parse_range(&mut self) -> Expr {
         let l = self.parse_add();
+        if matches!(self.peek(), Token::DotDot) {
+            self.advance();
+            let r = self.parse_add();
+            // a..b is inclusive → range(a, b+1)
+            let r_plus_one = Expr::BinOp {
+                op: BinOpKind::Add,
+                left: Box::new(r),
+                right: Box::new(Expr::Number(1.0)),
+            };
+            return Expr::Call { name: "range".to_string(), args: vec![l, r_plus_one] };
+        }
+        l
+    }
+
+    fn parse_comparison(&mut self) -> Expr {
+        let l = self.parse_range();
         // 'not in' is two tokens but one operator
         if matches!(self.peek(), Token::Not) && matches!(self.peek2(), Token::In) {
             self.advance(); // consume Not
             self.advance(); // consume In
-            let r = self.parse_add();
+            let r = self.parse_range();
             return Expr::BinOp { op: BinOpKind::NotIn, left: Box::new(l), right: Box::new(r) };
         }
         let op = match self.peek() {
@@ -407,7 +469,7 @@ impl Parser {
             _ => return l,
         };
         self.advance();
-        let r = self.parse_add();
+        let r = self.parse_range();
         Expr::BinOp { op, left: Box::new(l), right: Box::new(r) }
     }
 
@@ -576,9 +638,21 @@ impl Parser {
             }
 
             Token::LParen => {
-                let e = self.parse_expr();
-                self.expect(&Token::RParen);
-                e
+                let first = self.parse_expr();
+                if matches!(self.peek(), Token::Comma) {
+                    // Tuple literal: (a, b, c) → list
+                    let mut items = vec![first];
+                    while matches!(self.peek(), Token::Comma) {
+                        self.advance();
+                        if matches!(self.peek(), Token::RParen) { break; }
+                        items.push(self.parse_expr());
+                    }
+                    self.expect(&Token::RParen);
+                    Expr::List(items)
+                } else {
+                    self.expect(&Token::RParen);
+                    first
+                }
             }
 
             t => panic!("Unexpected token: {:?}", t),

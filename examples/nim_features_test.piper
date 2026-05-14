@@ -1,0 +1,77 @@
+# Testing all 4 Nim-inspired features
+
+# ── 1. .. range syntax ──────────────────────────────────────────────────────
+print("--- 1. .. Range Syntax ---")
+print("Counting 1 to 5:")
+for i in 1..5:
+    print("  " + str(i))
+
+let squares = [i * i for i in 1..6]
+print("Squares 1-6: " + str(squares))
+
+let n = 8
+print("Sum 1 to " + str(n) + ": " + str(sum([i for i in 1..n])))
+print("")
+
+# ── 2. case / of ────────────────────────────────────────────────────────────
+print("--- 2. case / of ---")
+fn activate(z, kind):
+    case kind:
+        of "relu":    return relu(z)
+        of "sigmoid": return sigmoid(z)
+        of "tanh":    return tanh(z)
+        else:         return z
+
+let z = [-1.0, 0.0, 1.0, 2.0]
+print("relu:    " + str([round(v, 3) for v in activate(z, "relu")]))
+print("sigmoid: " + str([round(v, 3) for v in activate(z, "sigmoid")]))
+print("tanh:    " + str([round(v, 3) for v in activate(z, "tanh")]))
+print("unknown: " + str(activate(z, "linear")))
+print("")
+
+# ── 3. Multiple return + tuple unpacking ────────────────────────────────────
+print("--- 3. Multiple Return & Tuple Unpacking ---")
+fn min_max(data):
+    return (min(data), max(data))
+
+fn train_step(X, y):
+    let loss = mean([v * v for v in X])
+    let acc  = round(1.0 - loss, 3)
+    return (loss, acc)
+
+let data = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0]
+let (lo, hi) = min_max(data)
+print("min=" + str(lo) + "  max=" + str(hi))
+
+let (loss, acc) = train_step([0.1, 0.2, 0.3], [1, 1, 1])
+print("loss=" + str(round(loss, 4)) + "  acc=" + str(acc))
+print("")
+
+# ── 4. result implicit return ────────────────────────────────────────────────
+print("--- 4. result Implicit Return ---")
+fn square(x):
+    result = x * x
+
+fn running_total(nums):
+    result = 0
+    for n in nums:
+        result += n
+
+fn classify(score):
+    if score >= 90:
+        result = "A"
+    elif score >= 75:
+        result = "B"
+    elif score >= 60:
+        result = "C"
+    else:
+        result = "F"
+
+print("square(7):           " + str(square(7)))
+print("running_total:       " + str(running_total([1, 2, 3, 4, 5])))
+print("classify(95):        " + classify(95))
+print("classify(72):        " + classify(72))
+print("classify(45):        " + classify(45))
+print("")
+
+print("All 4 Nim features work!")

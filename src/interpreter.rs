@@ -147,6 +147,19 @@ impl Interpreter {
                 self.set(name.clone(), v);
                 None
             }
+            Stmt::LetTuple { names, value } => {
+                let val = self.eval(value);
+                match val {
+                    Value::List(l) => {
+                        let items = l.borrow().clone();
+                        for (i, name) in names.iter().enumerate() {
+                            self.set(name.clone(), items.get(i).cloned().unwrap_or(Value::Nil));
+                        }
+                    }
+                    _ => panic!("Tuple unpacking requires a list on the right side"),
+                }
+                None
+            }
             Stmt::Assign { name, value } => {
                 let v = self.eval(value);
                 self.set_existing(name, v);
@@ -226,6 +239,16 @@ impl Interpreter {
                     }
                     _ => panic!("For loop requires a list (got {})", iter_val),
                 }
+                None
+            }
+
+            Stmt::Case { expr, branches, else_body } => {
+                let val = self.eval(expr);
+                for (pattern, body) in branches {
+                    let pval = self.eval(pattern);
+                    if values_eq(&val, &pval) { return self.exec(body); }
+                }
+                if let Some(eb) = else_body { return self.exec(eb); }
                 None
             }
 
@@ -450,49 +473,37 @@ impl Interpreter {
 
     // ── User function call ────────────────────────────────────────────────────
 
+    fn call_fn(&mut self, params: Vec<(String, Option<Value>)>, body: Vec<Stmt>, args: Vec<Value>) -> Value {
+        self.push_scope();
+        self.set("result".to_string(), Value::Nil); // implicit return variable
+        for (i, (p, default)) in params.iter().enumerate() {
+            let v = args.get(i).cloned()
+                .or_else(|| default.clone())
+                .unwrap_or_else(|| panic!("Missing argument '{}'", p));
+            self.set(p.clone(), v);
+        }
+        let sig = self.exec(&body);
+        let implicit = self.get("result"); // read before pop
+        self.pop_scope();
+        match sig {
+            Some(Signal::Return(v)) => v,
+            None                   => implicit,
+            Some(Signal::Break)    => panic!("'break' used outside a loop"),
+            Some(Signal::Continue) => panic!("'continue' used outside a loop"),
+        }
+    }
+
     fn call_user(&mut self, name: &str, args: Vec<Value>) -> Value {
         let func = self.get(name);
         match func {
-            Value::Fn { params, body } => {
-                self.push_scope();
-                for (i, (p, default)) in params.iter().enumerate() {
-                    let v = args.get(i).cloned()
-                        .or_else(|| default.clone())
-                        .unwrap_or_else(|| panic!("Missing argument '{}'", p));
-                    self.set(p.clone(), v);
-                }
-                let sig = self.exec(&body);
-                self.pop_scope();
-                match sig {
-                    Some(Signal::Return(v)) => v,
-                    None => Value::Nil,
-                    Some(Signal::Break)    => panic!("'break' used outside a loop"),
-                    Some(Signal::Continue) => panic!("'continue' used outside a loop"),
-                }
-            }
+            Value::Fn { params, body } => self.call_fn(params, body, args),
             _ => panic!("'{}' is not a function", name),
         }
     }
 
     fn call_value(&mut self, func: &Value, args: Vec<Value>) -> Value {
         match func.clone() {
-            Value::Fn { params, body } => {
-                self.push_scope();
-                for (i, (p, default)) in params.iter().enumerate() {
-                    let v = args.get(i).cloned()
-                        .or_else(|| default.clone())
-                        .unwrap_or_else(|| panic!("Missing argument '{}'", p));
-                    self.set(p.clone(), v);
-                }
-                let sig = self.exec(&body);
-                self.pop_scope();
-                match sig {
-                    Some(Signal::Return(v)) => v,
-                    None => Value::Nil,
-                    Some(Signal::Break)    => panic!("'break' used outside a loop"),
-                    Some(Signal::Continue) => panic!("'continue' used outside a loop"),
-                }
-            }
+            Value::Fn { params, body } => self.call_fn(params, body, args),
             _ => panic!("Value is not callable"),
         }
     }
