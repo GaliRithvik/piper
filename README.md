@@ -2,7 +2,7 @@
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.3.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.4.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions in one place.
 
@@ -47,6 +47,9 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 - **Membership operators** — `in` and `not in` for lists, strings, and dicts
 - **Loop control** — `break` and `continue` in `for` and `while` loops
 - **Error handling** — `try / except` blocks
+- **Negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
+- **Slicing** — `arr[1:4]`, `s[:3]`, `arr[-3:]`, `arr[1:-1]`
+- **Default parameters** — `fn greet(name, msg="Hello"):`
 - **Short print** — `p(Hello World);` instead of `print("Hello World")`
 - **Rust-powered** — fast tree-walk interpreter
 
@@ -221,6 +224,11 @@ piper/
 ---
 
 ## Changelog
+
+### v0.4.0
+- Added **negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
+- Added **slicing** — `arr[1:4]`, `s[:3]`, `arr[-3:]`, `arr[1:-1]`
+- Added **default parameters** — `fn greet(name, msg="Hello"):`
 
 ### v0.3.0
 - Added **Dictionary** type with full built-in support

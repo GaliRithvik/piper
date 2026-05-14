@@ -117,6 +117,16 @@ x /= 2
 ```python
 let s = "Hello, Piper!"
 
+# Negative indexing
+s[-1]                         # "!"
+s[-6]                         # "P"
+
+# Slicing
+s[0:5]                        # "Hello"
+s[:5]                         # "Hello"
+s[-6:]                        # "Piper!"
+s[7:-1]                       # "Piper"
+
 len(s)                        # 13
 upper(s)                      # "HELLO, PIPER!"
 lower(s)                      # "hello, piper!"
@@ -173,6 +183,18 @@ let nums = [1, 2, 3, 4, 5]
 # Indexing & assignment
 nums[0]           # 1
 nums[0] = 99
+
+# Negative indexing
+nums[-1]          # 5  (last element)
+nums[-2]          # 4  (second to last)
+nums[-1] = 99     # assign via negative index
+
+# Slicing
+nums[1:4]         # [2, 3, 4]
+nums[:3]          # [1, 2, 3]
+nums[2:]          # [3, 4, 5]
+nums[-3:]         # [3, 4, 5]
+nums[1:-1]        # [2, 3, 4]
 
 # Concatenation & repeat
 [1, 2] + [3, 4]  # [1, 2, 3, 4]
@@ -292,6 +314,18 @@ fn add(a, b):
 
 # Single-line
 fn square(x): return x * x
+
+# Default parameters
+fn greet(name, msg = "Hello"):
+    return msg + ", " + name + "!"
+
+fn power(base, exp = 2):
+    return base ** exp
+
+print(greet("Piper"))          # Hello, Piper!
+print(greet("Rithvik", "Hi"))  # Hi, Rithvik!
+print(power(5))                # 25
+print(power(2, 10))            # 1024
 
 # Recursive
 fn factorial(n):
