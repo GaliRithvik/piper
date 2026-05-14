@@ -13,7 +13,7 @@ pub enum Value {
     Nil,
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
-    Fn { params: Vec<String>, body: Vec<Stmt> },
+    Fn { params: Vec<(String, Option<Value>)>, body: Vec<Stmt> },
 }
 
 impl std::fmt::Display for Value {
@@ -158,10 +158,11 @@ impl Interpreter {
                 let obj = self.get(name);
                 match (&obj, &idx) {
                     (Value::List(l), Value::Number(n)) => {
-                        let i = *n as usize;
                         let mut items = l.borrow_mut();
+                        let len = items.len() as i64;
+                        let i = if *n < 0.0 { (len + *n as i64).max(0) as usize } else { *n as usize };
                         if i < items.len() { items[i] = val; }
-                        else { panic!("Index {} out of bounds (len {})", i, items.len()); }
+                        else { panic!("Index {} out of bounds (len {})", *n as i64, items.len()); }
                     }
                     (Value::Dict(d), key) => {
                         d.borrow_mut().insert(key.to_string(), val);
@@ -176,7 +177,10 @@ impl Interpreter {
             Stmt::Continue => Some(Signal::Continue),
 
             Stmt::Fn { name, params, body } => {
-                self.set(name.clone(), Value::Fn { params: params.clone(), body: body.clone() });
+                let resolved: Vec<(String, Option<Value>)> = params.iter()
+                    .map(|(p, def)| (p.clone(), def.as_ref().map(|e| self.eval(e))))
+                    .collect();
+                self.set(name.clone(), Value::Fn { params: resolved, body: body.clone() });
                 None
             }
 
@@ -309,19 +313,47 @@ impl Interpreter {
                 match (&obj, &idx) {
                     (Value::List(l), Value::Number(n)) => {
                         let items = l.borrow();
-                        let i = *n as usize;
-                        items.get(i).cloned().unwrap_or_else(|| panic!("Index {} out of bounds", i))
+                        let len = items.len() as i64;
+                        let i = if *n < 0.0 { (len + *n as i64).max(0) as usize } else { *n as usize };
+                        items.get(i).cloned().unwrap_or_else(|| panic!("Index {} out of bounds (len {})", *n as i64, items.len()))
                     }
                     (Value::Str(s), Value::Number(n)) => {
-                        let i = *n as usize;
-                        let c = s.chars().nth(i).unwrap_or_else(|| panic!("Char index {} out of bounds", i));
-                        Value::Str(c.to_string())
+                        let chars: Vec<char> = s.chars().collect();
+                        let len = chars.len() as i64;
+                        let i = if *n < 0.0 { (len + *n as i64).max(0) as usize } else { *n as usize };
+                        Value::Str(chars.get(i).map(|c| c.to_string()).unwrap_or_else(|| panic!("Char index {} out of bounds", *n as i64)))
                     }
                     (Value::Dict(d), key) => {
                         let k = key.to_string();
                         d.borrow().get(&k).cloned().unwrap_or(Value::Nil)
                     }
                     _ => panic!("Cannot index into {}", obj),
+                }
+            }
+
+            Expr::Slice { object, start, end } => {
+                let obj = self.eval(object);
+                let start_val = start.as_ref().map(|e| to_num(&self.eval(e)));
+                let end_val   = end.as_ref().map(|e| to_num(&self.eval(e)));
+                let resolve = |n: f64, len: usize| -> usize {
+                    if n < 0.0 { (len as i64 + n as i64).max(0) as usize } else { (n as usize).min(len) }
+                };
+                match obj {
+                    Value::List(l) => {
+                        let items = l.borrow().clone();
+                        let len = items.len();
+                        let lo = start_val.map(|n| resolve(n, len)).unwrap_or(0);
+                        let hi = end_val.map(|n| resolve(n, len)).unwrap_or(len).max(lo);
+                        make_list(items[lo..hi].to_vec())
+                    }
+                    Value::Str(s) => {
+                        let chars: Vec<char> = s.chars().collect();
+                        let len = chars.len();
+                        let lo = start_val.map(|n| resolve(n, len)).unwrap_or(0);
+                        let hi = end_val.map(|n| resolve(n, len)).unwrap_or(len).max(lo);
+                        Value::Str(chars[lo..hi].iter().collect())
+                    }
+                    _ => panic!("Cannot slice {}", obj),
                 }
             }
 
@@ -423,7 +455,12 @@ impl Interpreter {
         match func {
             Value::Fn { params, body } => {
                 self.push_scope();
-                for (p, v) in params.iter().zip(args) { self.set(p.clone(), v); }
+                for (i, (p, default)) in params.iter().enumerate() {
+                    let v = args.get(i).cloned()
+                        .or_else(|| default.clone())
+                        .unwrap_or_else(|| panic!("Missing argument '{}'", p));
+                    self.set(p.clone(), v);
+                }
                 let sig = self.exec(&body);
                 self.pop_scope();
                 match sig {
@@ -441,7 +478,12 @@ impl Interpreter {
         match func.clone() {
             Value::Fn { params, body } => {
                 self.push_scope();
-                for (p, v) in params.iter().zip(args) { self.set(p.clone(), v); }
+                for (i, (p, default)) in params.iter().enumerate() {
+                    let v = args.get(i).cloned()
+                        .or_else(|| default.clone())
+                        .unwrap_or_else(|| panic!("Missing argument '{}'", p));
+                    self.set(p.clone(), v);
+                }
                 let sig = self.exec(&body);
                 self.pop_scope();
                 match sig {

@@ -28,6 +28,7 @@ pub enum Expr {
     Dict(Vec<(Expr, Expr)>),
     ListComp { expr: Box<Expr>, var: String, iter: Box<Expr>, cond: Option<Box<Expr>> },
     Index { object: Box<Expr>, index: Box<Expr> },
+    Slice { object: Box<Expr>, start: Option<Box<Expr>>, end: Option<Box<Expr>> },
     FString(Vec<FStringPart>),
     BinOp { op: BinOpKind, left: Box<Expr>, right: Box<Expr> },
     UnaryOp { op: UnaryOpKind, expr: Box<Expr> },
@@ -47,7 +48,7 @@ pub enum Stmt {
     },
     While  { cond: Expr, body: Vec<Stmt> },
     For    { var: String, iter: Expr, body: Vec<Stmt> },
-    Fn     { name: String, params: Vec<String>, body: Vec<Stmt> },
+    Fn     { name: String, params: Vec<(String, Option<Expr>)>, body: Vec<Stmt> },
     Return(Expr),
     Break,
     Continue,
@@ -172,7 +173,15 @@ impl Parser {
         self.expect(&Token::LParen);
         let mut params = Vec::new();
         while !matches!(self.peek(), Token::RParen | Token::EOF) {
-            if let Token::Ident(p) = self.advance() { params.push(p); }
+            if let Token::Ident(p) = self.advance() {
+                let default = if matches!(self.peek(), Token::Assign) {
+                    self.advance();
+                    Some(self.parse_or())
+                } else {
+                    None
+                };
+                params.push((p, default));
+            }
             if matches!(self.peek(), Token::Comma) { self.advance(); }
         }
         self.expect(&Token::RParen);
@@ -258,11 +267,29 @@ impl Parser {
             _ => unreachable!(),
         };
 
-        // name[index] = value
+        // name[index] = value  OR  name[start:end]
         if matches!(self.peek2(), Token::LBracket) {
             self.advance(); // consume name
             self.advance(); // consume [
+            if matches!(self.peek(), Token::Colon) {
+                self.advance(); // consume :
+                let end = if matches!(self.peek(), Token::RBracket) { None }
+                          else { Some(Box::new(self.parse_expr())) };
+                self.expect(&Token::RBracket);
+                let obj = Expr::Slice { object: Box::new(Expr::Ident(name)), start: None, end };
+                if matches!(self.peek(), Token::Newline) { self.advance(); }
+                return Stmt::Expr(obj);
+            }
             let index = self.parse_expr();
+            if matches!(self.peek(), Token::Colon) {
+                self.advance(); // consume :
+                let end = if matches!(self.peek(), Token::RBracket) { None }
+                          else { Some(Box::new(self.parse_expr())) };
+                self.expect(&Token::RBracket);
+                let obj = Expr::Slice { object: Box::new(Expr::Ident(name)), start: Some(Box::new(index)), end };
+                if matches!(self.peek(), Token::Newline) { self.advance(); }
+                return Stmt::Expr(obj);
+            }
             self.expect(&Token::RBracket);
             if matches!(self.peek(), Token::Assign) {
                 self.advance();
@@ -434,15 +461,31 @@ impl Parser {
         }
     }
 
-    // Handles chained indexing: expr[i][j]...
+    // Handles chained indexing: expr[i][j]... and slicing: expr[start:end]
     fn parse_postfix(&mut self) -> Expr {
         let mut expr = self.parse_primary();
         loop {
             if matches!(self.peek(), Token::LBracket) {
                 self.advance();
-                let idx = self.parse_expr();
-                self.expect(&Token::RBracket);
-                expr = Expr::Index { object: Box::new(expr), index: Box::new(idx) };
+                if matches!(self.peek(), Token::Colon) {
+                    self.advance(); // consume :
+                    let end = if matches!(self.peek(), Token::RBracket) { None }
+                              else { Some(Box::new(self.parse_expr())) };
+                    self.expect(&Token::RBracket);
+                    expr = Expr::Slice { object: Box::new(expr), start: None, end };
+                } else {
+                    let idx = self.parse_expr();
+                    if matches!(self.peek(), Token::Colon) {
+                        self.advance(); // consume :
+                        let end = if matches!(self.peek(), Token::RBracket) { None }
+                                  else { Some(Box::new(self.parse_expr())) };
+                        self.expect(&Token::RBracket);
+                        expr = Expr::Slice { object: Box::new(expr), start: Some(Box::new(idx)), end };
+                    } else {
+                        self.expect(&Token::RBracket);
+                        expr = Expr::Index { object: Box::new(expr), index: Box::new(idx) };
+                    }
+                }
             } else {
                 break;
             }

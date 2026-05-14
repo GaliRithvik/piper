@@ -1,0 +1,43 @@
+# Test: negative indexing, default params, slicing
+
+# --- Negative Indexing ---
+print("--- Negative Indexing ---")
+let nums = [10, 20, 30, 40, 50]
+print("last:        " + str(nums[-1]))
+print("second last: " + str(nums[-2]))
+let s = "hello"
+print("last char:   " + s[-1])
+nums[-1] = 99
+print("after nums[-1]=99: " + str(nums))
+
+# --- Default Parameters ---
+print("")
+print("--- Default Parameters ---")
+fn greet(name, msg = "Hello"):
+    return msg + ", " + name + "!"
+
+fn power(base, exp = 2):
+    return base ** exp
+
+print(greet("Piper"))
+print(greet("Rithvik", "Hi"))
+print("2^default: " + str(power(5)))
+print("2^3:       " + str(power(2, 3)))
+
+# --- Slicing ---
+print("")
+print("--- Slicing ---")
+let arr = [1, 2, 3, 4, 5, 6, 7]
+print("arr[1:4]:  " + str(arr[1:4]))
+print("arr[:3]:   " + str(arr[:3]))
+print("arr[4:]:   " + str(arr[4:]))
+print("arr[-3:]:  " + str(arr[-3:]))
+print("arr[1:-1]: " + str(arr[1:-1]))
+
+let word = "Piper"
+print("word[1:3]: " + word[1:3])
+print("word[:2]:  " + word[:2])
+print("word[-2:]: " + word[-2:])
+
+print("")
+print("All 3 features work!")
