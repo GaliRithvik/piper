@@ -29,6 +29,8 @@ pub enum Expr {
     ListComp { expr: Box<Expr>, var: String, iter: Box<Expr>, cond: Option<Box<Expr>> },
     Index { object: Box<Expr>, index: Box<Expr> },
     Slice { object: Box<Expr>, start: Option<Box<Expr>>, end: Option<Box<Expr>> },
+    Attribute { object: Box<Expr>, field: String },
+    MethodCall { object: Box<Expr>, method: String, args: Vec<Expr> },
     FString(Vec<FStringPart>),
     BinOp { op: BinOpKind, left: Box<Expr>, right: Box<Expr> },
     UnaryOp { op: UnaryOpKind, expr: Box<Expr> },
@@ -54,7 +56,9 @@ pub enum Stmt {
     Break,
     Continue,
     Try    { body: Vec<Stmt>, except_var: Option<String>, handler: Vec<Stmt> },
-    Case   { expr: Expr, branches: Vec<(Expr, Vec<Stmt>)>, else_body: Option<Vec<Stmt>> },
+    Case     { expr: Expr, branches: Vec<(Expr, Vec<Stmt>)>, else_body: Option<Vec<Stmt>> },
+    ClassDef { name: String, methods: Vec<Stmt> },
+    SetAttr  { object: Expr, field: String, value: Expr },
     Expr(Expr),
 }
 
@@ -136,6 +140,7 @@ impl Parser {
             Token::For      => self.parse_for(),
             Token::Try      => self.parse_try(),
             Token::Case     => self.parse_case(),
+            Token::Class    => self.parse_class(),
             Token::Break    => {
                 self.advance();
                 if matches!(self.peek(), Token::Newline) { self.advance(); }
@@ -307,6 +312,25 @@ impl Parser {
         Stmt::Case { expr, branches, else_body }
     }
 
+    fn parse_class(&mut self) -> Stmt {
+        self.advance(); // consume 'class'
+        let name = match self.advance() {
+            Token::Ident(n) => n,
+            t => panic!("Expected class name, got {:?}", t),
+        };
+        self.expect(&Token::Colon);
+        if matches!(self.peek(), Token::Newline) { self.advance(); }
+        self.expect(&Token::Indent);
+        self.skip_newlines();
+        let mut methods = Vec::new();
+        while !matches!(self.peek(), Token::Dedent | Token::EOF) {
+            methods.push(self.parse_fn());
+            self.skip_newlines();
+        }
+        if matches!(self.peek(), Token::Dedent) { self.advance(); }
+        Stmt::ClassDef { name, methods }
+    }
+
     fn parse_ident_stmt(&mut self) -> Stmt {
         let name = match self.peek().clone() {
             Token::Ident(n) => n,
@@ -384,6 +408,39 @@ impl Parser {
         }
 
         let expr = self.parse_expr();
+        // Attribute assignment: obj.field = val  or  obj.field += val
+        if matches!(expr, Expr::Attribute { .. }) {
+            let op_tok = match self.peek().clone() {
+                Token::Assign | Token::PlusAssign | Token::MinusAssign |
+                Token::StarAssign | Token::SlashAssign => self.advance(),
+                _ => {
+                    if matches!(self.peek(), Token::Newline) { self.advance(); }
+                    return Stmt::Expr(expr);
+                }
+            };
+            if let Expr::Attribute { object, field } = expr {
+                let rhs = self.parse_expr();
+                let value = match op_tok {
+                    Token::Assign => rhs,
+                    tok => {
+                        let binop = match tok {
+                            Token::PlusAssign  => BinOpKind::Add,
+                            Token::MinusAssign => BinOpKind::Sub,
+                            Token::StarAssign  => BinOpKind::Mul,
+                            Token::SlashAssign => BinOpKind::Div,
+                            _ => unreachable!(),
+                        };
+                        Expr::BinOp {
+                            op: binop,
+                            left: Box::new(Expr::Attribute { object: object.clone(), field: field.clone() }),
+                            right: Box::new(rhs),
+                        }
+                    }
+                };
+                if matches!(self.peek(), Token::Newline) { self.advance(); }
+                return Stmt::SetAttr { object: *object, field, value };
+            }
+        }
         if matches!(self.peek(), Token::Newline) { self.advance(); }
         Stmt::Expr(expr)
     }
@@ -523,14 +580,14 @@ impl Parser {
         }
     }
 
-    // Handles chained indexing: expr[i][j]... and slicing: expr[start:end]
+    // Handles chained indexing, slicing, and attribute/method access
     fn parse_postfix(&mut self) -> Expr {
         let mut expr = self.parse_primary();
         loop {
             if matches!(self.peek(), Token::LBracket) {
                 self.advance();
                 if matches!(self.peek(), Token::Colon) {
-                    self.advance(); // consume :
+                    self.advance();
                     let end = if matches!(self.peek(), Token::RBracket) { None }
                               else { Some(Box::new(self.parse_expr())) };
                     self.expect(&Token::RBracket);
@@ -538,7 +595,7 @@ impl Parser {
                 } else {
                     let idx = self.parse_expr();
                     if matches!(self.peek(), Token::Colon) {
-                        self.advance(); // consume :
+                        self.advance();
                         let end = if matches!(self.peek(), Token::RBracket) { None }
                                   else { Some(Box::new(self.parse_expr())) };
                         self.expect(&Token::RBracket);
@@ -547,6 +604,25 @@ impl Parser {
                         self.expect(&Token::RBracket);
                         expr = Expr::Index { object: Box::new(expr), index: Box::new(idx) };
                     }
+                }
+            } else if matches!(self.peek(), Token::Dot) {
+                self.advance(); // consume .
+                let field = match self.advance() {
+                    Token::Ident(n) => n,
+                    t => panic!("Expected field name after '.', got {:?}", t),
+                };
+                if matches!(self.peek(), Token::LParen) {
+                    // method call: obj.method(args)
+                    self.advance(); // consume (
+                    let mut args = Vec::new();
+                    while !matches!(self.peek(), Token::RParen | Token::EOF) {
+                        args.push(self.parse_expr());
+                        if matches!(self.peek(), Token::Comma) { self.advance(); }
+                    }
+                    self.expect(&Token::RParen);
+                    expr = Expr::MethodCall { object: Box::new(expr), method: field, args };
+                } else {
+                    expr = Expr::Attribute { object: Box::new(expr), field };
                 }
             } else {
                 break;

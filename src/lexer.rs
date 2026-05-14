@@ -18,6 +18,7 @@ pub enum Token {
     Break, Continue,
     Try, Except,
     Case, Of,
+    Class,
 
     // Operators
     Plus, Minus, Star, Slash, Percent, StarStar,
@@ -211,6 +212,7 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
                         "except"   => Token::Except,
                         "case"     => Token::Case,
                         "of"       => Token::Of,
+                        "class"    => Token::Class,
                         "true"     => Token::Bool(true),
                         "false"    => Token::Bool(false),
                         "none" | "null" | "nil" => Token::None,

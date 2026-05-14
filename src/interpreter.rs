@@ -42,6 +42,15 @@ pub enum Value {
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
     Fn { params: Vec<(String, Option<Value>)>, body: Vec<Stmt> },
+    Class {
+        name: String,
+        methods: Rc<HashMap<String, Value>>,
+    },
+    Instance {
+        class_name: String,
+        fields: Rc<RefCell<HashMap<String, Value>>>,
+        methods: Rc<HashMap<String, Value>>,
+    },
 }
 
 impl std::fmt::Display for Value {
@@ -55,6 +64,14 @@ impl std::fmt::Display for Value {
             Value::Bool(b)   => write!(f, "{}", b),
             Value::Nil       => write!(f, "none"),
             Value::Fn { .. } => write!(f, "<fn>"),
+            Value::Class { name, .. } => write!(f, "<class {}>", name),
+            Value::Instance { class_name, fields, .. } => {
+                let mut pairs: Vec<String> = fields.borrow().iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect();
+                pairs.sort();
+                write!(f, "{}({})", class_name, pairs.join(", "))
+            }
             Value::List(l)   => {
                 let items: Vec<String> = l.borrow().iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", items.join(", "))
@@ -89,9 +106,10 @@ fn is_truthy(v: &Value) -> bool {
         Value::Nil       => false,
         Value::Number(n) => *n != 0.0,
         Value::Str(s)    => !s.is_empty(),
-        Value::List(l)   => !l.borrow().is_empty(),
-        Value::Dict(d)   => !d.borrow().is_empty(),
-        _                => true,
+        Value::List(l)     => !l.borrow().is_empty(),
+        Value::Dict(d)     => !d.borrow().is_empty(),
+        Value::Instance { .. } | Value::Class { .. } => true,
+        _                  => true,
     }
 }
 
@@ -101,6 +119,7 @@ fn values_eq(a: &Value, b: &Value) -> bool {
         (Value::Str(x),    Value::Str(y))    => x == y,
         (Value::Bool(x),   Value::Bool(y))   => x == y,
         (Value::Nil,       Value::Nil)        => true,
+        (Value::Instance { fields: fa, .. }, Value::Instance { fields: fb, .. }) => Rc::ptr_eq(fa, fb),
         _ => false,
     }
 }
@@ -222,6 +241,31 @@ impl Interpreter {
                     .map(|(p, def)| (p.clone(), def.as_ref().map(|e| self.eval(e))))
                     .collect();
                 self.set(name.clone(), Value::Fn { params: resolved, body: body.clone() });
+                None
+            }
+
+            Stmt::ClassDef { name, methods } => {
+                let mut method_map: HashMap<String, Value> = HashMap::new();
+                for m in methods {
+                    if let Stmt::Fn { name: mname, params, body } = m {
+                        let resolved: Vec<(String, Option<Value>)> = params.iter()
+                            .map(|(p, def)| (p.clone(), def.as_ref().map(|e| self.eval(e))))
+                            .collect();
+                        method_map.insert(mname.clone(), Value::Fn { params: resolved, body: body.clone() });
+                    }
+                }
+                self.set(name.clone(), Value::Class { name: name.clone(), methods: Rc::new(method_map) });
+                None
+            }
+
+            Stmt::SetAttr { object, field, value } => {
+                let val = self.eval(value);
+                let obj = self.eval(object);
+                if let Value::Instance { fields, .. } = obj {
+                    fields.borrow_mut().insert(field.clone(), val);
+                } else {
+                    panic!("Cannot set attribute '{}' on a non-instance value", field);
+                }
                 None
             }
 
@@ -445,6 +489,36 @@ impl Interpreter {
                 self.call_builtin(name, arg_vals)
                     .unwrap_or_else(|av| self.call_user(name, av))
             }
+
+            Expr::Attribute { object, field } => {
+                let obj = self.eval(object);
+                if let Value::Instance { fields, .. } = obj {
+                    fields.borrow().get(field).cloned().unwrap_or(Value::Nil)
+                } else {
+                    panic!("Cannot access attribute '{}' on non-instance value", field)
+                }
+            }
+
+            Expr::MethodCall { object, method, args } => {
+                let obj = self.eval(object);
+                let arg_vals: Vec<Value> = args.iter().map(|a| self.eval(a)).collect();
+                match obj.clone() {
+                    Value::Instance { ref fields, ref methods, .. } => {
+                        // Fields take priority (allows stored callables)
+                        if let Some(func) = fields.borrow().get(method.as_str()).cloned() {
+                            return self.call_value(&func, arg_vals);
+                        }
+                        // Class method: prepend self
+                        if let Some(func) = methods.get(method.as_str()).cloned() {
+                            let mut call_args = vec![obj.clone()];
+                            call_args.extend(arg_vals);
+                            return self.call_value(&func, call_args);
+                        }
+                        panic!("'{}' has no method '{}'", obj, method)
+                    }
+                    _ => panic!("Cannot call method '{}' on non-instance value", method),
+                }
+            }
         }
     }
 
@@ -523,15 +597,25 @@ impl Interpreter {
 
     fn call_user(&mut self, name: &str, args: Vec<Value>) -> Value {
         let func = self.get(name);
-        match func {
-            Value::Fn { params, body } => self.call_fn(params, body, args),
-            _ => panic!("'{}' is not a function", name),
-        }
+        self.call_value(&func, args)
     }
 
     fn call_value(&mut self, func: &Value, args: Vec<Value>) -> Value {
         match func.clone() {
             Value::Fn { params, body } => self.call_fn(params, body, args),
+            Value::Class { name: class_name, methods } => {
+                let instance = Value::Instance {
+                    class_name: class_name.clone(),
+                    fields: Rc::new(RefCell::new(HashMap::new())),
+                    methods: methods.clone(),
+                };
+                if let Some(init_fn) = methods.get("init") {
+                    let mut call_args = vec![instance.clone()];
+                    call_args.extend(args);
+                    self.call_value(init_fn, call_args);
+                }
+                instance
+            }
             _ => panic!("Value is not callable"),
         }
     }
@@ -562,14 +646,16 @@ impl Interpreter {
             "float" => Value::Number(args.first().map(|v| to_num(v)).unwrap_or(0.0)),
             "bool"  => Value::Bool(args.first().map(|v| is_truthy(v)).unwrap_or(false)),
             "type"  => Value::Str(match args.first() {
-                Some(Value::Number(_))  => "number",
-                Some(Value::Str(_))     => "str",
-                Some(Value::Bool(_))    => "bool",
-                Some(Value::List(_))    => "list",
-                Some(Value::Dict(_))    => "dict",
-                Some(Value::Fn { .. })  => "fn",
-                Some(Value::Nil) | None => "none",
-            }.to_string()),
+                Some(Value::Number(_))              => "number".to_string(),
+                Some(Value::Str(_))                 => "str".to_string(),
+                Some(Value::Bool(_))                => "bool".to_string(),
+                Some(Value::List(_))                => "list".to_string(),
+                Some(Value::Dict(_))                => "dict".to_string(),
+                Some(Value::Fn { .. })              => "fn".to_string(),
+                Some(Value::Class { name, .. })     => format!("class {}", name),
+                Some(Value::Instance { class_name, .. }) => class_name.clone(),
+                Some(Value::Nil) | None             => "none".to_string(),
+            }),
 
             // ── Math ─────────────────────────────────────────────────────────
             "sqrt"  => Value::Number(to_num(args.first().unwrap_or(&Value::Nil)).sqrt()),

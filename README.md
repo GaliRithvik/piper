@@ -2,7 +2,7 @@
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.6.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.7.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions in one place.
 
@@ -41,6 +41,7 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 ## Features
 
 - **Python-like syntax** — clean, readable, easy to write
+- **Classes** — `class Foo:` with `init`, methods, `self`, field access (`obj.field`), method calls (`obj.method()`)
 - **90+ AI/ML built-ins** — activations, vector ops, matrix math, loss functions, random, data processing, metrics, ASCII visualization
 - **Dictionary type** — `{"key": val}` literals, indexing, and dict built-ins
 - **Pipe operator** `|>` — chain functions elegantly
@@ -129,6 +130,25 @@ fn classify(score):
     elif score >= 75: result = "B"
     else: result = "C"
 
+# Classes
+class Dog:
+    fn init(self, name, breed):
+        self.name = name
+        self.breed = breed
+        self.tricks = []
+
+    fn bark(self):
+        print(self.name + " says: Woof!")
+
+    fn learn(self, trick):
+        append(self.tricks, trick)   # append mutates in place
+
+let d = Dog("Rex", "Labrador")
+d.bark()                             # Rex says: Woof!
+d.learn("sit")
+print(d.name)                        # Rex
+print(type(d))                       # Dog
+
 # AI activations
 let z = [-2, -1, 0, 1, 2]
 let activated = relu(z)
@@ -200,10 +220,11 @@ Run it with `cargo run -- examples/demo.piper`
 ### Run a file
 
 ```bash
-cargo run -- examples/demo.piper              # full language demo (14 sections)
-cargo run -- examples/ai_demo.piper           # AI/ML activations, vectors, loss
-cargo run -- examples/nim_features_test.piper # v0.5: .., case/of, tuples, result
+cargo run -- examples/demo.piper               # full language demo (14 sections)
+cargo run -- examples/ai_demo.piper            # AI/ML activations, vectors, loss
+cargo run -- examples/nim_features_test.piper  # v0.5: .., case/of, tuples, result
 cargo run -- examples/aiml_builtins_test.piper # v0.6: random, metrics, plot
+cargo run -- examples/classes_test.piper       # v0.7: classes, init, methods, self
 ```
 
 ### Start the REPL
@@ -257,6 +278,7 @@ piper/
 │   ├── nim_features_test.piper   # v0.5 features: .., case/of, tuples, result
 │   ├── features_test.piper       # v0.4 features: slicing, negative index, defaults
 │   ├── aiml_builtins_test.piper  # v0.6 AI/ML built-ins: random, batch, metrics, plot
+│   ├── classes_test.piper        # v0.7 class syntax: init, methods, self, field access
 │   ├── benchmark.piper           # Performance benchmark
 │   ├── benchmark_pure.py         # Pure Python benchmark
 │   ├── benchmark_numpy.py        # NumPy benchmark
@@ -278,6 +300,15 @@ piper/
 ---
 
 ## Changelog
+
+### v0.7.0
+- Added **`class` keyword** — define classes with methods
+- Added **`init` method** — constructor called automatically on instantiation
+- Added **`self`** — first param of every method, bound to the instance
+- Added **field access** — `obj.field` reads instance fields
+- Added **method calls** — `obj.method(args)` dispatches to class methods
+- Added **attribute assignment** — `self.field = value` and `self.field += value`
+- Added **chaining** — `obj.a.b`, `obj.method().field` all supported
 
 ### v0.6.0
 - Added **Random built-ins** — `seed`, `rand`, `randn`, `randint`, `shuffle`, `choice`

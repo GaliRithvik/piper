@@ -1,0 +1,140 @@
+# Classes Test — v0.7 feature
+
+# ── 1. Basic class with init and methods ────────────────────────────────────
+print("--- 1. Basic Class ---")
+
+class Dog:
+    fn init(self, name, breed):
+        self.name = name
+        self.breed = breed
+        self.tricks = []
+
+    fn bark(self):
+        print(self.name + " says: Woof!")
+
+    fn learn(self, trick):
+        append(self.tricks, trick)
+        print(self.name + " learned: " + trick)
+
+    fn show_tricks(self):
+        if len(self.tricks) == 0:
+            print(self.name + " knows no tricks yet.")
+        else:
+            print(self.name + " knows: " + str(self.tricks))
+
+let d = Dog("Rex", "Labrador")
+d.bark()
+d.learn("sit")
+d.learn("shake")
+d.show_tricks()
+print("Type: " + type(d))
+print("Name: " + d.name)
+print("Breed: " + d.breed)
+print("")
+
+# ── 2. Class with computed methods ──────────────────────────────────────────
+print("--- 2. Math Class ---")
+
+class Circle:
+    fn init(self, radius):
+        self.radius = radius
+
+    fn area(self):
+        return pi() * self.radius * self.radius
+
+    fn perimeter(self):
+        return 2.0 * pi() * self.radius
+
+    fn scale(self, factor):
+        self.radius = self.radius * factor
+
+    fn info(self):
+        return "Circle(r=" + str(round(self.radius, 3)) + ", area=" + str(round(self.area(), 3)) + ")"
+
+let c = Circle(5.0)
+print("Area:      " + str(round(c.area(), 4)))
+print("Perimeter: " + str(round(c.perimeter(), 4)))
+c.scale(2.0)
+print("After scale(2): " + c.info())
+print("")
+
+# ── 3. Multiple instances (independent state) ───────────────────────────────
+print("--- 3. Multiple Instances ---")
+
+class Counter:
+    fn init(self, start):
+        self.count = start
+
+    fn increment(self):
+        self.count += 1
+
+    fn decrement(self):
+        self.count -= 1
+
+    fn value(self):
+        return self.count
+
+let a = Counter(0)
+let b = Counter(100)
+a.increment()
+a.increment()
+a.increment()
+b.decrement()
+b.decrement()
+print("Counter a: " + str(a.value()))
+print("Counter b: " + str(b.value()))
+print("")
+
+# ── 4. Class with default parameters ────────────────────────────────────────
+print("--- 4. Default Parameters in Class ---")
+
+class Greeting:
+    fn init(self, name, msg="Hello"):
+        self.name = name
+        self.msg = msg
+
+    fn speak(self):
+        print(self.msg + ", " + self.name + "!")
+
+let g1 = Greeting("Alice")
+let g2 = Greeting("Bob", "Hi")
+g1.speak()
+g2.speak()
+print("")
+
+# ── 5. Class used in ML context ─────────────────────────────────────────────
+print("--- 5. ML Model Class ---")
+
+class LinearModel:
+    fn init(self, n_features):
+        seed(7)
+        self.weights = randn(n_features)
+        self.bias = 0.0
+        self.losses = []
+
+    fn predict(self, x):
+        return dot(self.weights, x) + self.bias
+
+    fn train_step(self, x, y_true, lr):
+        let y_pred = self.predict(x)
+        let error = y_pred - y_true
+        append(self.losses, error * error)
+        self.bias = self.bias - lr * error
+
+    fn loss_history(self):
+        return self.losses
+
+let model = LinearModel(3)
+print("Initial weights: " + str([round(w, 3) for w in model.weights]))
+
+let X = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
+let y = [1.0, 2.0, 3.0]
+
+for i in 0..2:
+    model.train_step(X[i], y[i], 0.01)
+
+print("Loss history: " + str([round(l, 4) for l in model.loss_history()]))
+print("Type check: " + type(model))
+print("")
+
+print("Classes work!")

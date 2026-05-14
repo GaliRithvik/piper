@@ -21,7 +21,8 @@ Complete guide to Piper's syntax and built-in functions.
 13. [List Comprehensions](#13-list-comprehensions)
 14. [Pipe Operator](#14-pipe-operator)
 15. [Error Handling](#15-error-handling)
-16. [Built-in Functions](#16-built-in-functions)
+16. [Classes](#16-classes)
+17. [Built-in Functions](#17-built-in-functions)
     - Random, Data Processing, Evaluation Metrics, ASCII Visualization (v0.6)
 
 ---
@@ -543,7 +544,92 @@ fn safe_divide(a, b):
 
 ---
 
-## 16. Built-in Functions
+## 16. Classes
+
+Piper supports object-oriented programming with `class` definitions, constructors, instance methods, and `self`.
+
+### Syntax
+
+```python
+class ClassName:
+    fn init(self, param1, param2):
+        self.field1 = param1
+        self.field2 = param2
+
+    fn method_name(self, arg):
+        return self.field1 + arg
+```
+
+- **`init`** — constructor, called automatically when an instance is created
+- **`self`** — first parameter of every method; refers to the current instance
+- **`self.field`** — read or write instance fields
+- **`obj.field`** — read a field from outside the class
+- **`obj.method(args)`** — call a method on an instance
+
+### Creating instances
+
+```python
+let d = Dog("Rex", "Labrador")  # calls init(self, "Rex", "Labrador")
+```
+
+### Field access and assignment
+
+```python
+print(d.name)          # Rex
+d.name = "Max"         # update field
+d.count += 1           # augmented field assignment
+```
+
+### Method calls
+
+```python
+d.bark()               # calls bark(self) with d as self
+c.scale(2.0)           # calls scale(self, 2.0)
+print(c.info())        # chain: method returning a string
+```
+
+### Full example
+
+```python
+class Circle:
+    fn init(self, radius):
+        self.radius = radius
+
+    fn area(self):
+        return pi() * self.radius * self.radius
+
+    fn scale(self, factor):
+        self.radius = self.radius * factor
+
+    fn info(self):
+        return "Circle(r=" + str(round(self.radius, 2)) + ")"
+
+let c = Circle(5.0)
+print(c.area())            # 78.5398
+c.scale(2.0)
+print(c.info())            # Circle(r=10.0)
+print(type(c))             # Circle
+```
+
+### `type()` on classes and instances
+
+```python
+class Dog: ...
+let d = Dog("Rex", "Lab")
+print(type(Dog))    # class Dog
+print(type(d))      # Dog
+```
+
+### Notes
+
+- Methods are defined inside the class body with `fn`
+- `append(self.list, item)` mutates the list in place — do **not** reassign: `self.list = append(...)` overwrites the field with `none`
+- Classes support default parameters: `fn greet(self, msg="Hello"):`
+- Chained access works: `obj.sub.field`, `obj.method().next_method()`
+
+---
+
+## 17. Built-in Functions
 
 ### I/O
 | Function | Description |
