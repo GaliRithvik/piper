@@ -15,6 +15,8 @@ pub enum Token {
     For, While, In,
     And, Or, Not,
     None,
+    Break, Continue,
+    Try, Except,
 
     // Operators
     Plus, Minus, Star, Slash, Percent, StarStar,
@@ -26,6 +28,7 @@ pub enum Token {
     // Punctuation
     LParen, RParen,
     LBracket, RBracket,
+    LBrace, RBrace,
     Comma, Colon, Dot,
 
     // Layout
@@ -86,6 +89,8 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
             ']' => { tokens.push(Token::RBracket); if *bracket_depth > 0 { *bracket_depth -= 1; } i += 1; }
             '(' => { tokens.push(Token::LParen); i += 1; }
             ')' => { tokens.push(Token::RParen); i += 1; }
+            '{' => { tokens.push(Token::LBrace); i += 1; }
+            '}' => { tokens.push(Token::RBrace); i += 1; }
             ',' => { tokens.push(Token::Comma); i += 1; }
             ':' => { tokens.push(Token::Colon); i += 1; }
             '.' => { tokens.push(Token::Dot); i += 1; }
@@ -175,22 +180,26 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
                         continue;
                     }
                     let tok = match word.as_str() {
-                        "let"    => Token::Let,
-                        "fn"     => Token::Fn,
-                        "return" => Token::Return,
-                        "if"     => Token::If,
-                        "elif"   => Token::Elif,
-                        "else"   => Token::Else,
-                        "for"    => Token::For,
-                        "while"  => Token::While,
-                        "in"     => Token::In,
-                        "and"    => Token::And,
-                        "or"     => Token::Or,
-                        "not"    => Token::Not,
-                        "true"   => Token::Bool(true),
-                        "false"  => Token::Bool(false),
+                        "let"      => Token::Let,
+                        "fn"       => Token::Fn,
+                        "return"   => Token::Return,
+                        "if"       => Token::If,
+                        "elif"     => Token::Elif,
+                        "else"     => Token::Else,
+                        "for"      => Token::For,
+                        "while"    => Token::While,
+                        "in"       => Token::In,
+                        "and"      => Token::And,
+                        "or"       => Token::Or,
+                        "not"      => Token::Not,
+                        "break"    => Token::Break,
+                        "continue" => Token::Continue,
+                        "try"      => Token::Try,
+                        "except"   => Token::Except,
+                        "true"     => Token::Bool(true),
+                        "false"    => Token::Bool(false),
                         "none" | "null" | "nil" => Token::None,
-                        _        => Token::Ident(word),
+                        _          => Token::Ident(word),
                     };
                     tokens.push(tok);
                 }

@@ -12,6 +12,7 @@ pub enum Value {
     Bool(bool),
     Nil,
     List(Rc<RefCell<Vec<Value>>>),
+    Dict(Rc<RefCell<HashMap<String, Value>>>),
     Fn { params: Vec<String>, body: Vec<Stmt> },
 }
 
@@ -30,11 +31,18 @@ impl std::fmt::Display for Value {
                 let items: Vec<String> = l.borrow().iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", items.join(", "))
             }
+            Value::Dict(d) => {
+                let mut pairs: Vec<String> = d.borrow().iter()
+                    .map(|(k, v)| format!("\"{}\": {}", k, v))
+                    .collect();
+                pairs.sort();
+                write!(f, "{{{}}}", pairs.join(", "))
+            }
         }
     }
 }
 
-pub(crate) enum Signal { Return(Value) }
+pub(crate) enum Signal { Return(Value), Break, Continue }
 
 // ── Standalone helpers (no self borrow) ─────────────────────────────────────
 
@@ -54,6 +62,7 @@ fn is_truthy(v: &Value) -> bool {
         Value::Number(n) => *n != 0.0,
         Value::Str(s)    => !s.is_empty(),
         Value::List(l)   => !l.borrow().is_empty(),
+        Value::Dict(d)   => !d.borrow().is_empty(),
         _                => true,
     }
 }
@@ -70,6 +79,10 @@ fn values_eq(a: &Value, b: &Value) -> bool {
 
 fn make_list(v: Vec<Value>) -> Value {
     Value::List(Rc::new(RefCell::new(v)))
+}
+
+fn make_dict(pairs: Vec<(String, Value)>) -> Value {
+    Value::Dict(Rc::new(RefCell::new(pairs.into_iter().collect())))
 }
 
 fn format_val(v: &Value, spec: &str) -> String {
@@ -142,20 +155,25 @@ impl Interpreter {
             Stmt::IndexAssign { name, index, value } => {
                 let idx = self.eval(index);
                 let val = self.eval(value);
-                let list = self.get(name);
-                match (&list, &idx) {
+                let obj = self.get(name);
+                match (&obj, &idx) {
                     (Value::List(l), Value::Number(n)) => {
                         let i = *n as usize;
                         let mut items = l.borrow_mut();
                         if i < items.len() { items[i] = val; }
                         else { panic!("Index {} out of bounds (len {})", i, items.len()); }
                     }
-                    _ => panic!("Cannot index-assign into non-list"),
+                    (Value::Dict(d), key) => {
+                        d.borrow_mut().insert(key.to_string(), val);
+                    }
+                    _ => panic!("Cannot index-assign into {}", obj),
                 }
                 None
             }
             Stmt::Expr(e) => { self.eval(e); None }
             Stmt::Return(e) => Some(Signal::Return(self.eval(e))),
+            Stmt::Break    => Some(Signal::Break),
+            Stmt::Continue => Some(Signal::Continue),
 
             Stmt::Fn { name, params, body } => {
                 self.set(name.clone(), Value::Fn { params: params.clone(), body: body.clone() });
@@ -177,7 +195,12 @@ impl Interpreter {
                 loop {
                     let cv = self.eval(cond);
                     if !is_truthy(&cv) { break; }
-                    if let Some(s) = self.exec(body) { return Some(s); }
+                    match self.exec(body) {
+                        None => {}
+                        Some(Signal::Break) => break,
+                        Some(Signal::Continue) => continue,
+                        Some(s) => return Some(s),
+                    }
                 }
                 None
             }
@@ -187,12 +210,51 @@ impl Interpreter {
                 match iter_val {
                     Value::List(l) => {
                         let items: Vec<Value> = l.borrow().clone();
-                        for item in items {
+                        'outer: for item in items {
                             self.set(var.clone(), item);
-                            if let Some(s) = self.exec(body) { return Some(s); }
+                            match self.exec(body) {
+                                None => {}
+                                Some(Signal::Break) => break 'outer,
+                                Some(Signal::Continue) => continue 'outer,
+                                Some(s) => return Some(s),
+                            }
                         }
                     }
                     _ => panic!("For loop requires a list (got {})", iter_val),
+                }
+                None
+            }
+
+            Stmt::Try { body, except_var, handler } => {
+                let saved_depth = self.scopes.len();
+                // Silence Rust's default "panicked at …" stderr output while in try block
+                let prev_hook = std::panic::take_hook();
+                std::panic::set_hook(Box::new(|_| {}));
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    self.exec(body)
+                }));
+                std::panic::set_hook(prev_hook);
+                match result {
+                    Ok(sig) => {
+                        if let Some(s) = sig { return Some(s); }
+                    }
+                    Err(e) => {
+                        // Restore scope stack to pre-try depth
+                        while self.scopes.len() > saved_depth {
+                            self.scopes.pop();
+                        }
+                        let msg = if let Some(s) = e.downcast_ref::<String>() {
+                            s.clone()
+                        } else if let Some(s) = e.downcast_ref::<&str>() {
+                            s.to_string()
+                        } else {
+                            "unknown error".to_string()
+                        };
+                        if let Some(var) = except_var {
+                            self.set(var.clone(), Value::Str(msg));
+                        }
+                        if let Some(s) = self.exec(handler) { return Some(s); }
+                    }
                 }
                 None
             }
@@ -212,6 +274,13 @@ impl Interpreter {
             Expr::List(items) => {
                 let vals: Vec<Value> = items.iter().map(|e| self.eval(e)).collect();
                 make_list(vals)
+            }
+
+            Expr::Dict(pairs) => {
+                let entries: Vec<(String, Value)> = pairs.iter()
+                    .map(|(k, v)| (self.eval(k).to_string(), self.eval(v)))
+                    .collect();
+                make_dict(entries)
             }
 
             Expr::ListComp { expr, var, iter, cond } => {
@@ -247,6 +316,10 @@ impl Interpreter {
                         let i = *n as usize;
                         let c = s.chars().nth(i).unwrap_or_else(|| panic!("Char index {} out of bounds", i));
                         Value::Str(c.to_string())
+                    }
+                    (Value::Dict(d), key) => {
+                        let k = key.to_string();
+                        d.borrow().get(&k).cloned().unwrap_or(Value::Nil)
                     }
                     _ => panic!("Cannot index into {}", obj),
                 }
@@ -328,6 +401,18 @@ impl Interpreter {
             BinOpKind::GtEq  => Value::Bool(to_num(&l) >= to_num(&r)),
             BinOpKind::And   => Value::Bool(is_truthy(&l) && is_truthy(&r)),
             BinOpKind::Or    => Value::Bool(is_truthy(&l) || is_truthy(&r)),
+            BinOpKind::In => match &r {
+                Value::List(lst) => Value::Bool(lst.borrow().iter().any(|v| values_eq(v, &l))),
+                Value::Str(s) => { let sub = l.to_string(); Value::Bool(s.contains(sub.as_str())) }
+                Value::Dict(d) => Value::Bool(d.borrow().contains_key(&l.to_string())),
+                _ => panic!("'in' requires a list, string, or dict on the right side"),
+            },
+            BinOpKind::NotIn => match &r {
+                Value::List(lst) => Value::Bool(!lst.borrow().iter().any(|v| values_eq(v, &l))),
+                Value::Str(s) => { let sub = l.to_string(); Value::Bool(!s.contains(sub.as_str())) }
+                Value::Dict(d) => Value::Bool(!d.borrow().contains_key(&l.to_string())),
+                _ => panic!("'not in' requires a list, string, or dict on the right side"),
+            },
         }
     }
 
@@ -344,6 +429,8 @@ impl Interpreter {
                 match sig {
                     Some(Signal::Return(v)) => v,
                     None => Value::Nil,
+                    Some(Signal::Break)    => panic!("'break' used outside a loop"),
+                    Some(Signal::Continue) => panic!("'continue' used outside a loop"),
                 }
             }
             _ => panic!("'{}' is not a function", name),
@@ -360,6 +447,8 @@ impl Interpreter {
                 match sig {
                     Some(Signal::Return(v)) => v,
                     None => Value::Nil,
+                    Some(Signal::Break)    => panic!("'break' used outside a loop"),
+                    Some(Signal::Continue) => panic!("'continue' used outside a loop"),
                 }
             }
             _ => panic!("Value is not callable"),
@@ -396,6 +485,7 @@ impl Interpreter {
                 Some(Value::Str(_))     => "str",
                 Some(Value::Bool(_))    => "bool",
                 Some(Value::List(_))    => "list",
+                Some(Value::Dict(_))    => "dict",
                 Some(Value::Fn { .. })  => "fn",
                 Some(Value::Nil) | None => "none",
             }.to_string()),
@@ -696,6 +786,7 @@ impl Interpreter {
             "len" => match args.first() {
                 Some(Value::List(l)) => Value::Number(l.borrow().len() as f64),
                 Some(Value::Str(s))  => Value::Number(s.chars().count() as f64),
+                Some(Value::Dict(d)) => Value::Number(d.borrow().len() as f64),
                 _ => Value::Number(0.0),
             },
             "range" => {
@@ -911,6 +1002,58 @@ impl Interpreter {
             "char" => {
                 let n = to_num(args.first().unwrap_or(&Value::Nil)) as u32;
                 Value::Str(char::from_u32(n).map(|c| c.to_string()).unwrap_or_default())
+            }
+
+            // ── Dict operations ──────────────────────────────────────────────
+            "keys" => {
+                if let Some(Value::Dict(d)) = args.first() {
+                    let mut ks: Vec<Value> = d.borrow().keys().map(|k| Value::Str(k.clone())).collect();
+                    ks.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+                    make_list(ks)
+                } else { Value::Nil }
+            }
+            "values" => {
+                if let Some(Value::Dict(d)) = args.first() {
+                    make_list(d.borrow().values().cloned().collect())
+                } else { Value::Nil }
+            }
+            "items" => {
+                if let Some(Value::Dict(d)) = args.first() {
+                    let mut pairs: Vec<Value> = d.borrow().iter()
+                        .map(|(k, v)| make_list(vec![Value::Str(k.clone()), v.clone()]))
+                        .collect();
+                    pairs.sort_by(|a, b| {
+                        let ak = if let Value::List(l) = a { l.borrow()[0].to_string() } else { String::new() };
+                        let bk = if let Value::List(l) = b { l.borrow()[0].to_string() } else { String::new() };
+                        ak.cmp(&bk)
+                    });
+                    make_list(pairs)
+                } else { Value::Nil }
+            }
+            "has_key" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::Dict(d)), Some(key)) => Value::Bool(d.borrow().contains_key(&key.to_string())),
+                    _ => Value::Bool(false),
+                }
+            }
+            "get" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::Dict(d)), Some(key)) => {
+                        let k = key.to_string();
+                        let default = args.get(2).cloned().unwrap_or(Value::Nil);
+                        d.borrow().get(&k).cloned().unwrap_or(default)
+                    }
+                    _ => Value::Nil,
+                }
+            }
+            "del_key" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::Dict(d)), Some(key)) => {
+                        d.borrow_mut().remove(&key.to_string());
+                        Value::Nil
+                    }
+                    _ => Value::Nil,
+                }
             }
 
             // ── AI loss functions ────────────────────────────────────────────

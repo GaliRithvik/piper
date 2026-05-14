@@ -5,6 +5,7 @@ pub enum BinOpKind {
     Add, Sub, Mul, Div, Mod, Pow,
     Eq, NotEq, Lt, Gt, LtEq, GtEq,
     And, Or,
+    In, NotIn,
 }
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub enum Expr {
     Nil,
     Ident(String),
     List(Vec<Expr>),
+    Dict(Vec<(Expr, Expr)>),
     ListComp { expr: Box<Expr>, var: String, iter: Box<Expr>, cond: Option<Box<Expr>> },
     Index { object: Box<Expr>, index: Box<Expr> },
     FString(Vec<FStringPart>),
@@ -47,6 +49,9 @@ pub enum Stmt {
     For    { var: String, iter: Expr, body: Vec<Stmt> },
     Fn     { name: String, params: Vec<String>, body: Vec<Stmt> },
     Return(Expr),
+    Break,
+    Continue,
+    Try    { body: Vec<Stmt>, except_var: Option<String>, handler: Vec<Stmt> },
     Expr(Expr),
 }
 
@@ -120,12 +125,23 @@ impl Parser {
 
     fn parse_stmt(&mut self) -> Stmt {
         match self.peek().clone() {
-            Token::Let    => self.parse_let(),
-            Token::Fn     => self.parse_fn(),
-            Token::Return => self.parse_return(),
-            Token::If     => self.parse_if(),
-            Token::While  => self.parse_while(),
-            Token::For    => self.parse_for(),
+            Token::Let      => self.parse_let(),
+            Token::Fn       => self.parse_fn(),
+            Token::Return   => self.parse_return(),
+            Token::If       => self.parse_if(),
+            Token::While    => self.parse_while(),
+            Token::For      => self.parse_for(),
+            Token::Try      => self.parse_try(),
+            Token::Break    => {
+                self.advance();
+                if matches!(self.peek(), Token::Newline) { self.advance(); }
+                Stmt::Break
+            }
+            Token::Continue => {
+                self.advance();
+                if matches!(self.peek(), Token::Newline) { self.advance(); }
+                Stmt::Continue
+            }
             Token::Ident(_) => self.parse_ident_stmt(),
             _ => {
                 let e = self.parse_expr();
@@ -216,6 +232,24 @@ impl Parser {
         let iter = self.parse_expr();
         let body = self.parse_block();
         Stmt::For { var, iter, body }
+    }
+
+    fn parse_try(&mut self) -> Stmt {
+        self.advance(); // consume 'try'
+        let body = self.parse_block();
+        self.skip_newlines();
+        if !matches!(self.peek(), Token::Except) {
+            panic!("Expected 'except' after try block");
+        }
+        self.advance(); // consume 'except'
+        let except_var = if let Token::Ident(n) = self.peek().clone() {
+            self.advance();
+            Some(n)
+        } else {
+            None
+        };
+        let handler = self.parse_block();
+        Stmt::Try { body, except_var, handler }
     }
 
     fn parse_ident_stmt(&mut self) -> Stmt {
@@ -328,6 +362,13 @@ impl Parser {
 
     fn parse_comparison(&mut self) -> Expr {
         let l = self.parse_add();
+        // 'not in' is two tokens but one operator
+        if matches!(self.peek(), Token::Not) && matches!(self.peek2(), Token::In) {
+            self.advance(); // consume Not
+            self.advance(); // consume In
+            let r = self.parse_add();
+            return Expr::BinOp { op: BinOpKind::NotIn, left: Box::new(l), right: Box::new(r) };
+        }
         let op = match self.peek() {
             Token::Eq    => BinOpKind::Eq,
             Token::NotEq => BinOpKind::NotEq,
@@ -335,6 +376,7 @@ impl Parser {
             Token::Gt    => BinOpKind::Gt,
             Token::LtEq  => BinOpKind::LtEq,
             Token::GtEq  => BinOpKind::GtEq,
+            Token::In    => BinOpKind::In,
             _ => return l,
         };
         self.advance();
@@ -450,6 +492,29 @@ impl Parser {
                 }
                 self.expect(&Token::RBracket);
                 Expr::List(items)
+            }
+
+            Token::LBrace => {
+                // Dict literal: {} or {key: val, ...}
+                if matches!(self.peek(), Token::RBrace) {
+                    self.advance();
+                    return Expr::Dict(vec![]);
+                }
+                let mut pairs = Vec::new();
+                loop {
+                    let key = self.parse_or();
+                    self.expect(&Token::Colon);
+                    let val = self.parse_or();
+                    pairs.push((key, val));
+                    if matches!(self.peek(), Token::Comma) {
+                        self.advance();
+                        if matches!(self.peek(), Token::RBrace) { break; }
+                    } else {
+                        break;
+                    }
+                }
+                self.expect(&Token::RBrace);
+                Expr::Dict(pairs)
             }
 
             Token::Ident(name) => {
