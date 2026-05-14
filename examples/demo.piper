@@ -3,21 +3,34 @@
 #  Python-like syntax, Rust-powered
 # ================================
 
-print("Welcome to Piper v0.1!")
+print("Welcome to Piper v0.3!")
 print("")
 
-# --- Variables & arithmetic ---
+# --- 1. Variables & arithmetic ---
+print("--- 1. Variables & Arithmetic ---")
 let width = 12
 let height = 5
 let area = width * height
 print("Rectangle: " + str(width) + " x " + str(height) + " = " + str(area))
-
-# --- Strings ---
-let lang = "Piper"
-print("Language '" + lang + "' has " + str(len(lang)) + " characters")
+let pi = 3.14159
+let radius = 7
+print("Circle area: " + str(round(pi * radius * radius, 2)))
 print("")
 
-# --- Conditionals ---
+# --- 2. Strings ---
+print("--- 2. Strings ---")
+let lang = "Piper"
+print("Language '" + lang + "' has " + str(len(lang)) + " characters")
+print(upper(lang) + " -> " + lower(lang))
+let sentence = "  hello piper  "
+print("Trimmed: '" + trim(sentence) + "'")
+let words = split("one,two,three", ",")
+print("Split: " + str(words))
+print("Joined: " + join("-", words))
+print("")
+
+# --- 3. Conditionals ---
+print("--- 3. Conditionals ---")
 let temp = 28
 print("Temperature: " + str(temp) + "C")
 if temp > 35:
@@ -30,7 +43,8 @@ else:
     print("Status: Cold!")
 print("")
 
-# --- Functions ---
+# --- 4. Functions ---
+print("--- 4. Functions ---")
 fn factorial(n):
     if n <= 1:
         return 1
@@ -46,12 +60,17 @@ fn is_prime(n):
         i = i + 1
     return true
 
+fn greet(name):
+    return "Hello, " + name + "!"
+
+print(greet("Piper"))
 print("Factorials:")
 for i in range(1, 8):
     print("  " + str(i) + "! = " + str(factorial(i)))
 print("")
 
-# --- For loop: primes ---
+# --- 5. For Loop ---
+print("--- 5. For Loop ---")
 print("Primes up to 30:")
 let line = "  "
 for n in range(2, 31):
@@ -60,7 +79,8 @@ for n in range(2, 31):
 print(line)
 print("")
 
-# --- While loop: FizzBuzz ---
+# --- 6. While Loop: FizzBuzz ---
+print("--- 6. While Loop: FizzBuzz ---")
 print("FizzBuzz (1-20):")
 let i = 1
 while i <= 20:
@@ -73,6 +93,108 @@ while i <= 20:
     else:
         print("  " + str(i))
     i = i + 1
-
 print("")
-print("Done! Piper works.")
+
+# --- 7. List Comprehensions ---
+print("--- 7. List Comprehensions ---")
+let squares = [x * x for x in range(1, 6)]
+let evens   = [x for x in range(1, 21) if x % 2 == 0]
+let lengths = [len(w) for w in ["piper", "is", "awesome"]]
+print("Squares 1-5:   " + str(squares))
+print("Evens 1-20:    " + str(evens))
+print("Word lengths:  " + str(lengths))
+print("")
+
+# --- 8. Dictionaries ---
+print("--- 8. Dictionaries ---")
+let student = {"name": "Rithvik", "age": 20, "grade": "A"}
+print("Name:  " + student["name"])
+print("Age:   " + str(student["age"]))
+student["score"] = 95
+print("Score: " + str(student["score"]))
+print("Keys:  " + str(keys(student)))
+print("Has grade? " + str(has_key(student, "grade")))
+print("Country: " + str(get(student, "country", "not set")))
+del_key(student, "grade")
+print("After del grade, has grade? " + str(has_key(student, "grade")))
+print("")
+
+# --- 9. in / not in ---
+print("--- 9. in / not in ---")
+let fruits = ["apple", "banana", "mango", "cherry"]
+print("apple in fruits:    " + str("apple" in fruits))
+print("grape in fruits:    " + str("grape" in fruits))
+print("grape not in fruits:" + str("grape" not in fruits))
+print("'an' in 'banana':   " + str("an" in "banana"))
+print("'name' in student:  " + str("name" in student))
+let allowed = [1, 2, 3, 4, 5]
+for n in range(1, 8):
+    if n in allowed:
+        print("  " + str(n) + " is allowed")
+    else:
+        print("  " + str(n) + " is NOT allowed")
+print("")
+
+# --- 10. break / continue ---
+print("--- 10. break / continue ---")
+print("First 4 odd numbers using continue:")
+let count = 0
+for n in range(1, 20):
+    if n % 2 == 0:
+        continue
+    print("  " + str(n))
+    count += 1
+    if count == 4:
+        break
+
+print("Sum until we hit a multiple of 7:")
+let total = 0
+for n in range(1, 100):
+    if n % 7 == 0:
+        print("  Stopped at " + str(n))
+        break
+    total += n
+print("  Total = " + str(total))
+print("")
+
+# --- 11. Higher-order Functions ---
+print("--- 11. Higher-order Functions ---")
+fn double(x): return x * 2
+fn is_even(x): return x % 2 == 0
+fn add(a, b): return a + b
+
+let nums = [1, 2, 3, 4, 5, 6, 7, 8]
+let doubled  = map(nums, double)
+let evens2   = filter(nums, is_even)
+let total2   = reduce(nums, add, 0)
+print("nums:           " + str(nums))
+print("map(double):    " + str(doubled))
+print("filter(even):   " + str(evens2))
+print("reduce(add):    " + str(total2))
+print("enumerate:      " + str(enumerate(["a", "b", "c"])))
+print("")
+
+# --- 12. try / except ---
+print("--- 12. try / except ---")
+try:
+    let arr = [10, 20, 30]
+    let val = arr[99]
+except err:
+    print("Caught error: " + err)
+
+try:
+    let x = 5
+    let bad = unknown_var + x
+except e:
+    print("Caught: " + e)
+
+fn safe_divide(a, b):
+    try:
+        return a / b
+    except e:
+        return 0
+
+print("10 / 2 = " + str(safe_divide(10, 2)))
+print("")
+
+print("Done! Piper v0.3 works.")
