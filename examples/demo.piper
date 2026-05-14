@@ -3,7 +3,7 @@
 #  Python-like syntax, Rust-powered
 # ================================
 
-print("Welcome to Piper v0.3!")
+print("Welcome to Piper v0.4!")
 print("")
 
 # --- 1. Variables & arithmetic ---
@@ -43,8 +43,8 @@ else:
     print("Status: Cold!")
 print("")
 
-# --- 4. Functions ---
-print("--- 4. Functions ---")
+# --- 4. Functions & Default Parameters ---
+print("--- 4. Functions & Default Parameters ---")
 fn factorial(n):
     if n <= 1:
         return 1
@@ -60,10 +60,16 @@ fn is_prime(n):
         i = i + 1
     return true
 
-fn greet(name):
-    return "Hello, " + name + "!"
+fn greet(name, msg = "Hello"):
+    return msg + ", " + name + "!"
+
+fn power(base, exp = 2):
+    return base ** exp
 
 print(greet("Piper"))
+print(greet("Rithvik", "Hi"))
+print("5 squared (default): " + str(power(5)))
+print("2 to the 10th:       " + str(power(2, 10)))
 print("Factorials:")
 for i in range(1, 8):
     print("  " + str(i) + "! = " + str(factorial(i)))
@@ -197,4 +203,30 @@ fn safe_divide(a, b):
 print("10 / 2 = " + str(safe_divide(10, 2)))
 print("")
 
-print("Done! Piper v0.3 works.")
+# --- 13. Negative Indexing ---
+print("--- 13. Negative Indexing ---")
+let colors = ["red", "green", "blue", "yellow", "purple"]
+print("Last:        " + colors[-1])
+print("Second last: " + colors[-2])
+let tag = "Piper-lang"
+print("Last char:   " + tag[-1])
+print("Second last: " + tag[-2])
+colors[-1] = "pink"
+print("After colors[-1]='pink': " + str(colors))
+print("")
+
+# --- 14. Slicing ---
+print("--- 14. Slicing ---")
+let data = [10, 20, 30, 40, 50, 60, 70, 80]
+print("data[2:5]:   " + str(data[2:5]))
+print("data[:4]:    " + str(data[:4]))
+print("data[5:]:    " + str(data[5:]))
+print("data[-3:]:   " + str(data[-3:]))
+print("data[1:-1]:  " + str(data[1:-1]))
+let phrase = "Hello, Piper!"
+print("phrase[7:12]: " + phrase[7:12])
+print("phrase[:5]:   " + phrase[:5])
+print("phrase[-6:]:  " + phrase[-6:])
+print("")
+
+print("Done! Piper v0.4 works.")
