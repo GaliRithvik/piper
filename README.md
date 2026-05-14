@@ -6,6 +6,34 @@ Piper is a programming language with Python-like syntax and a Rust backend, desi
 
 ---
 
+## Quick Start
+
+> **Requirements:** [Rust](https://rustup.rs/) must be installed.
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/GaliRithvik/piper.git
+cd piper
+
+# 2. Run the demo
+cargo run -- examples/demo.piper
+
+# 3. Write your own code
+cargo run -- myfile.piper
+
+# 4. Start the interactive REPL
+cargo run
+```
+
+**VS Code users** — run any `.piper` file with one shortcut:
+```bash
+# Install syntax highlighting (Mac/Linux)
+cp -r vscode-extension ~/.vscode/extensions/piper-language
+```
+Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shift+B`** (Windows/Linux).
+
+---
+
 ## Features
 
 - **Python-like syntax** — clean, readable, easy to write
