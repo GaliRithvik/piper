@@ -292,7 +292,7 @@ piper/
 │
 ├── performance_chart.png         # Benchmark bar chart + Big-O zone chart
 ├── PERFORMANCE.md                # Benchmark results and Big-O analysis
-├── LANGUAGE.md                   # Full language reference (16 sections)
+├── LANGUAGE.md                   # Full language reference (17 sections)
 └── .vscode/
     └── tasks.json                # Run current file with Cmd+Shift+B
 ```
