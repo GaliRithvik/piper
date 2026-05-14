@@ -22,6 +22,7 @@ Complete guide to Piper's syntax and built-in functions.
 14. [Pipe Operator](#14-pipe-operator)
 15. [Error Handling](#15-error-handling)
 16. [Built-in Functions](#16-built-in-functions)
+    - Random, Data Processing, Evaluation Metrics, ASCII Visualization (v0.6)
 
 ---
 
@@ -651,6 +652,75 @@ fn safe_divide(a, b):
 | `cross_entropy(pred, true)` | Cross-entropy loss |
 | `one_hot(index, depth)` | One-hot encode |
 
+### Random
+| Function | Description |
+|---|---|
+| `seed(n)` | Set PRNG seed for reproducibility |
+| `rand()` | Random float in [0, 1) |
+| `rand(n)` | List of `n` random floats in [0, 1) |
+| `rand(lo, hi)` | Random float in [lo, hi) |
+| `randn()` | Standard normal sample (mean=0, std=1) |
+| `randn(n)` | List of `n` normal samples |
+| `randn(rows, cols)` | Matrix of normal samples |
+| `randint(lo, hi)` | Random integer in [lo, hi) |
+| `shuffle(list)` | Return shuffled copy of list (Fisher-Yates) |
+| `choice(list)` | Pick a random element |
+
+```python
+seed(42)
+let w = randn(3, 4)          # 3×4 weight matrix
+let idx = randint(0, 100)    # random index
+let batch = shuffle(data)    # shuffled data
+```
+
+### Data Processing
+| Function | Description |
+|---|---|
+| `batch(data, size)` | Split list into mini-batches of given size |
+| `train_test_split(X, ratio)` | Split `X` into `(train, test)` — ratio is test fraction |
+| `train_test_split(X, y, ratio)` | Split both `X` and `y` → `(X_train, X_test, y_train, y_test)` |
+| `standardize(list)` | Zero-mean, unit-variance normalisation |
+| `normalize_rows(matrix)` | L2-normalize each row to unit length |
+
+```python
+let batches = batch(X, 32)                          # mini-batches
+let (X_tr, X_te, y_tr, y_te) = train_test_split(X, y, 0.2)
+let X_std = standardize(X)                          # z-score
+let W_norm = normalize_rows(W)                      # unit rows
+```
+
+### Evaluation Metrics
+| Function | Description |
+|---|---|
+| `accuracy(pred, true)` | Fraction of correct predictions |
+| `precision(pred, true)` | TP / (TP + FP) — binary labels 0/1 |
+| `recall(pred, true)` | TP / (TP + FN) — binary labels 0/1 |
+| `f1_score(pred, true)` | Harmonic mean of precision and recall |
+| `r2_score(pred, true)` | Coefficient of determination (regression) |
+| `confusion_matrix(pred, true)` | N×N matrix of true vs predicted classes |
+
+```python
+let acc = accuracy(y_pred, y_true)
+let f1  = f1_score(y_pred, y_true)
+let r2  = r2_score(reg_pred, reg_true)
+let cm  = confusion_matrix(y_pred, y_true)
+```
+
+### ASCII Visualization
+| Function | Description |
+|---|---|
+| `plot(list)` | ASCII line chart (prints to terminal, up to 60 cols wide, 10 rows tall) |
+| `bar_chart(data, labels)` | ASCII horizontal bar chart |
+
+```python
+# Visualize training loss
+let losses = [0.9, 0.7, 0.5, 0.3, 0.2]
+plot(losses)
+
+# Visualize model scores
+bar_chart([0.92, 0.87, 0.95], ["CNN", "RNN", "Transformer"])
+```
+
 ---
 
-*For runnable examples see [`examples/demo.piper`](examples/demo.piper), [`examples/ai_demo.piper`](examples/ai_demo.piper), and [`examples/nim_features_test.piper`](examples/nim_features_test.piper).*
+*For runnable examples see [`examples/demo.piper`](examples/demo.piper), [`examples/ai_demo.piper`](examples/ai_demo.piper), [`examples/nim_features_test.piper`](examples/nim_features_test.piper), and [`examples/aiml_builtins_test.piper`](examples/aiml_builtins_test.piper).*

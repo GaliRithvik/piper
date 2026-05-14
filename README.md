@@ -2,7 +2,7 @@
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.5.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.6.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions in one place.
 
@@ -41,7 +41,7 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 ## Features
 
 - **Python-like syntax** — clean, readable, easy to write
-- **70+ AI/ML built-ins** — activations, vector ops, matrix math, loss functions
+- **90+ AI/ML built-ins** — activations, vector ops, matrix math, loss functions, random, data processing, metrics, ASCII visualization
 - **Dictionary type** — `{"key": val}` literals, indexing, and dict built-ins
 - **Pipe operator** `|>` — chain functions elegantly
 - **List comprehensions** with `if` conditions
@@ -181,6 +181,10 @@ Run it with `cargo run -- examples/demo.piper`
 | Matrices | `matmul`, `transpose`, `identity`, `reshape` |
 | Arrays | `zeros`, `ones`, `linspace`, `arange` |
 | Loss | `mse`, `cross_entropy`, `one_hot` |
+| Random | `seed`, `rand`, `randn`, `randint`, `shuffle`, `choice` |
+| Data | `batch`, `train_test_split`, `standardize`, `normalize_rows` |
+| Metrics | `accuracy`, `precision`, `recall`, `f1_score`, `r2_score`, `confusion_matrix` |
+| Viz | `plot`, `bar_chart` |
 | Lists | `append`, `pop`, `sort`, `reverse`, `slice`, `flatten`, `zip`, `map`, `filter`, `reduce`, `enumerate`, `range` |
 | Strings | `len`, `split`, `join`, `upper`, `lower`, `trim`, `contains`, `replace`, `startswith`, `endswith`, `char` |
 | Dicts | `keys`, `values`, `items`, `has_key`, `get`, `del_key` |
@@ -250,6 +254,7 @@ piper/
 │   ├── nn_forward.py             # Same in Python (comparison)
 │   ├── nim_features_test.piper   # v0.5 features: .., case/of, tuples, result
 │   ├── features_test.piper       # v0.4 features: slicing, negative index, defaults
+│   ├── aiml_builtins_test.piper  # v0.6 AI/ML built-ins: random, batch, metrics, plot
 │   ├── benchmark.piper           # Performance benchmark
 │   ├── benchmark_pure.py         # Pure Python benchmark
 │   ├── benchmark_numpy.py        # NumPy benchmark
@@ -271,6 +276,12 @@ piper/
 ---
 
 ## Changelog
+
+### v0.6.0
+- Added **Random built-ins** — `seed`, `rand`, `randn`, `randint`, `shuffle`, `choice`
+- Added **Data processing** — `batch`, `train_test_split`, `standardize`, `normalize_rows`
+- Added **Evaluation metrics** — `accuracy`, `precision`, `recall`, `f1_score`, `r2_score`, `confusion_matrix`
+- Added **ASCII visualization** — `plot` (line chart), `bar_chart` (bar chart) — see results in terminal, no dependencies
 
 ### v0.5.0
 - Added **`..` range syntax** — `for i in 1..10` (inclusive, Nim-inspired)

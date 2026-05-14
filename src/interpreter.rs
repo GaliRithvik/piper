@@ -1,7 +1,35 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::cell::Cell;
 use crate::parser::{Stmt, Expr, FStringPart, BinOpKind, UnaryOpKind};
+
+// ── Thread-local PRNG (Xorshift64 + Box-Muller) ──────────────────────────────
+
+thread_local! {
+    static RNG_STATE: Cell<u64> = Cell::new(6364136223846793005u64);
+}
+
+fn xorshift_next() -> u64 {
+    RNG_STATE.with(|s| {
+        let mut x = s.get();
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        s.set(x);
+        x
+    })
+}
+
+fn rand_f64() -> f64 {
+    (xorshift_next() >> 11) as f64 * (1.0 / (1u64 << 53) as f64)
+}
+
+fn rand_normal() -> f64 {
+    let u1 = rand_f64().max(1e-10);
+    let u2 = rand_f64();
+    (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
+}
 
 // ── Value ────────────────────────────────────────────────────────────────────
 
@@ -1138,6 +1166,275 @@ impl Interpreter {
                 let idx   = to_num(args.get(0).unwrap_or(&Value::Nil)) as usize;
                 let depth = to_num(args.get(1).unwrap_or(&Value::Nil)) as usize;
                 make_list((0..depth).map(|i| Value::Number(if i == idx { 1.0 } else { 0.0 })).collect())
+            }
+
+            // ── Random ──────────────────────────────────────────────────────
+            "seed" => {
+                let n = to_num(args.first().unwrap_or(&Value::Nil)) as u64;
+                RNG_STATE.with(|s| s.set(if n == 0 { 1 } else { n }));
+                Value::Nil
+            }
+            "rand" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(a), Some(b)) => {
+                        let lo = to_num(a); let hi = to_num(b);
+                        Value::Number(lo + rand_f64() * (hi - lo))
+                    }
+                    (Some(n), None) => {
+                        let count = to_num(n) as usize;
+                        make_list((0..count).map(|_| Value::Number(rand_f64())).collect())
+                    }
+                    _ => Value::Number(rand_f64()),
+                }
+            }
+            "randn" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(rows_v), Some(cols_v)) => {
+                        let rows = to_num(rows_v) as usize;
+                        let cols = to_num(cols_v) as usize;
+                        make_list((0..rows).map(|_| {
+                            make_list((0..cols).map(|_| Value::Number(rand_normal())).collect())
+                        }).collect())
+                    }
+                    (Some(n_v), None) => {
+                        let n = to_num(n_v) as usize;
+                        make_list((0..n).map(|_| Value::Number(rand_normal())).collect())
+                    }
+                    _ => Value::Number(rand_normal()),
+                }
+            }
+            "randint" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(lo_v), Some(hi_v)) => {
+                        let lo = to_num(lo_v) as i64;
+                        let hi = to_num(hi_v) as i64;
+                        let range = (hi - lo).max(1) as u64;
+                        Value::Number((lo + (xorshift_next() % range) as i64) as f64)
+                    }
+                    _ => panic!("randint(lo, hi)"),
+                }
+            }
+            "shuffle" => {
+                if let Some(Value::List(lst)) = args.first() {
+                    let mut v = lst.borrow().clone();
+                    let n = v.len();
+                    for i in (1..n).rev() {
+                        let j = (xorshift_next() as usize) % (i + 1);
+                        v.swap(i, j);
+                    }
+                    make_list(v)
+                } else { Value::Nil }
+            }
+            "choice" => {
+                if let Some(Value::List(lst)) = args.first() {
+                    let v = lst.borrow();
+                    if v.is_empty() { Value::Nil }
+                    else { v[(xorshift_next() as usize) % v.len()].clone() }
+                } else { Value::Nil }
+            }
+
+            // ── Data preprocessing ───────────────────────────────────────────
+            "batch" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(data)), Some(size_v)) => {
+                        let size = to_num(size_v) as usize;
+                        let v = data.borrow().clone();
+                        make_list(v.chunks(size).map(|c| make_list(c.to_vec())).collect())
+                    }
+                    _ => panic!("batch(data, size)"),
+                }
+            }
+            "train_test_split" => {
+                match args.len() {
+                    2 => {
+                        // train_test_split(X, ratio)
+                        if let (Some(Value::List(x)), Some(ratio_v)) = (args.get(0), args.get(1)) {
+                            let ratio = to_num(ratio_v);
+                            let v = x.borrow().clone();
+                            let split = ((v.len() as f64) * (1.0 - ratio)).round() as usize;
+                            make_list(vec![make_list(v[..split].to_vec()), make_list(v[split..].to_vec())])
+                        } else { panic!("train_test_split(X, ratio)") }
+                    }
+                    3 => {
+                        // train_test_split(X, y, ratio)
+                        if let (Some(Value::List(x)), Some(Value::List(y)), Some(ratio_v)) =
+                            (args.get(0), args.get(1), args.get(2)) {
+                            let ratio = to_num(ratio_v);
+                            let xv = x.borrow().clone();
+                            let yv = y.borrow().clone();
+                            let split = ((xv.len() as f64) * (1.0 - ratio)).round() as usize;
+                            make_list(vec![
+                                make_list(xv[..split].to_vec()),
+                                make_list(xv[split..].to_vec()),
+                                make_list(yv[..split].to_vec()),
+                                make_list(yv[split..].to_vec()),
+                            ])
+                        } else { panic!("train_test_split(X, y, ratio)") }
+                    }
+                    _ => panic!("train_test_split(X, ratio) or train_test_split(X, y, ratio)"),
+                }
+            }
+            "standardize" => {
+                if let Some(Value::List(lst)) = args.first() {
+                    let v: Vec<f64> = lst.borrow().iter().map(to_num).collect();
+                    let n = v.len() as f64;
+                    let mean = v.iter().sum::<f64>() / n;
+                    let std_dev = (v.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n).sqrt().max(1e-10);
+                    make_list(v.iter().map(|x| Value::Number((x - mean) / std_dev)).collect())
+                } else { panic!("standardize(list)") }
+            }
+            "normalize_rows" => {
+                if let Some(Value::List(mat)) = args.first() {
+                    let rows: Vec<Value> = mat.borrow().iter().map(|row| {
+                        if let Value::List(r) = row {
+                            let v: Vec<f64> = r.borrow().iter().map(to_num).collect();
+                            let norm = v.iter().map(|x| x * x).sum::<f64>().sqrt().max(1e-10);
+                            make_list(v.iter().map(|x| Value::Number(x / norm)).collect())
+                        } else { row.clone() }
+                    }).collect();
+                    make_list(rows)
+                } else { panic!("normalize_rows(matrix)") }
+            }
+
+            // ── Evaluation metrics ───────────────────────────────────────────
+            "accuracy" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
+                        let p = pred.borrow(); let t = true_v.borrow();
+                        let correct = p.iter().zip(t.iter()).filter(|(a, b)| values_eq(a, b)).count();
+                        Value::Number(correct as f64 / p.len() as f64)
+                    }
+                    _ => panic!("accuracy(predictions, targets)"),
+                }
+            }
+            "confusion_matrix" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
+                        let p = pred.borrow(); let t = true_v.borrow();
+                        // collect unique classes
+                        let mut classes: Vec<String> = p.iter().chain(t.iter())
+                            .map(|v| v.to_string()).collect();
+                        classes.sort(); classes.dedup();
+                        let nc = classes.len();
+                        let idx = |v: &Value| classes.iter().position(|c| c == &v.to_string()).unwrap_or(0);
+                        let mut mat = vec![vec![0i64; nc]; nc];
+                        for (pred_v, true_v) in p.iter().zip(t.iter()) {
+                            mat[idx(true_v)][idx(pred_v)] += 1;
+                        }
+                        make_list(mat.iter().map(|row| {
+                            make_list(row.iter().map(|&x| Value::Number(x as f64)).collect())
+                        }).collect())
+                    }
+                    _ => panic!("confusion_matrix(predictions, targets)"),
+                }
+            }
+            "precision" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
+                        let p = pred.borrow(); let t = true_v.borrow();
+                        let tp = p.iter().zip(t.iter()).filter(|(a, b)| {
+                            to_num(a) == 1.0 && to_num(b) == 1.0
+                        }).count() as f64;
+                        let fp = p.iter().zip(t.iter()).filter(|(a, b)| {
+                            to_num(a) == 1.0 && to_num(b) == 0.0
+                        }).count() as f64;
+                        Value::Number(tp / (tp + fp).max(1e-10))
+                    }
+                    _ => panic!("precision(predictions, targets)"),
+                }
+            }
+            "recall" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
+                        let p = pred.borrow(); let t = true_v.borrow();
+                        let tp = p.iter().zip(t.iter()).filter(|(a, b)| {
+                            to_num(a) == 1.0 && to_num(b) == 1.0
+                        }).count() as f64;
+                        let fn_ = p.iter().zip(t.iter()).filter(|(a, b)| {
+                            to_num(a) == 0.0 && to_num(b) == 1.0
+                        }).count() as f64;
+                        Value::Number(tp / (tp + fn_).max(1e-10))
+                    }
+                    _ => panic!("recall(predictions, targets)"),
+                }
+            }
+            "f1_score" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
+                        let p_args = vec![args[0].clone(), args[1].clone()];
+                        let t_args = vec![args[0].clone(), args[1].clone()];
+                        let p = if let Ok(Value::Number(x)) = self.call_builtin("precision", p_args) { x } else { 0.0 };
+                        let r = if let Ok(Value::Number(x)) = self.call_builtin("recall", t_args) { x } else { 0.0 };
+                        let _ = pred; let _ = true_v;
+                        Value::Number(2.0 * p * r / (p + r).max(1e-10))
+                    }
+                    _ => panic!("f1_score(predictions, targets)"),
+                }
+            }
+            "r2_score" => {
+                match (args.get(0), args.get(1)) {
+                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
+                        let p = pred.borrow(); let t = true_v.borrow();
+                        let t_nums: Vec<f64> = t.iter().map(to_num).collect();
+                        let t_mean = t_nums.iter().sum::<f64>() / t_nums.len() as f64;
+                        let ss_tot: f64 = t_nums.iter().map(|y| (y - t_mean).powi(2)).sum();
+                        let ss_res: f64 = p.iter().zip(t_nums.iter()).map(|(a, b)| (to_num(a) - b).powi(2)).sum();
+                        Value::Number(1.0 - ss_res / ss_tot.max(1e-10))
+                    }
+                    _ => panic!("r2_score(predictions, targets)"),
+                }
+            }
+
+            // ── ASCII visualization ──────────────────────────────────────────
+            "plot" => {
+                if let Some(Value::List(lst)) = args.first() {
+                    let vals: Vec<f64> = lst.borrow().iter().map(to_num).collect();
+                    if vals.is_empty() { return Ok(Value::Nil); }
+                    let height = 10usize;
+                    let width = vals.len().min(60);
+                    let step = (vals.len() as f64 / width as f64).ceil() as usize;
+                    let sampled: Vec<f64> = (0..width).map(|i| vals[i * step]).collect();
+                    let vmin = sampled.iter().cloned().fold(f64::INFINITY, f64::min);
+                    let vmax = sampled.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                    let range = (vmax - vmin).max(1e-10);
+                    let mut grid = vec![vec![' '; width]; height];
+                    for (col, &v) in sampled.iter().enumerate() {
+                        let row = height - 1 - ((v - vmin) / range * (height - 1) as f64).round() as usize;
+                        let row = row.min(height - 1);
+                        grid[row][col] = '●';
+                        for r in (row + 1)..height { grid[r][col] = '│'; }
+                    }
+                    let label_top = format!("{:.2}", vmax);
+                    let label_bot = format!("{:.2}", vmin);
+                    println!("{} ┤", label_top);
+                    for row in &grid {
+                        println!("     │{}", row.iter().collect::<String>());
+                    }
+                    println!("     └{}", "─".repeat(width));
+                    println!("{} ", label_bot);
+                    Value::Nil
+                } else { panic!("plot(list)") }
+            }
+            "bar_chart" => {
+                let data_v = args.get(0).cloned().unwrap_or(Value::Nil);
+                let labels_v = args.get(1).cloned();
+                if let Value::List(lst) = data_v {
+                    let vals: Vec<f64> = lst.borrow().iter().map(to_num).collect();
+                    let labels: Vec<String> = if let Some(Value::List(lbl)) = labels_v {
+                        lbl.borrow().iter().map(|v| v.to_string()).collect()
+                    } else {
+                        (0..vals.len()).map(|i| i.to_string()).collect()
+                    };
+                    let vmax = vals.iter().cloned().fold(f64::NEG_INFINITY, f64::max).max(1e-10);
+                    let bar_width = 40usize;
+                    let label_w = labels.iter().map(|l| l.len()).max().unwrap_or(0).max(1);
+                    for (label, &v) in labels.iter().zip(vals.iter()) {
+                        let bar_len = ((v / vmax) * bar_width as f64).round() as usize;
+                        println!("{:>width$} │{} {:.2}", label, "█".repeat(bar_len), v, width = label_w);
+                    }
+                    println!("{:>width$} └{}", "", "─".repeat(bar_width + 5), width = label_w);
+                    Value::Nil
+                } else { panic!("bar_chart(data, labels)") }
             }
 
             _ => return Err(args),

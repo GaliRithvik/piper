@@ -1,0 +1,78 @@
+# AI/ML Built-ins Test — v0.6 features
+
+# ── 1. Random Numbers ────────────────────────────────────────────────────────
+print("--- 1. Random ---")
+seed(42)
+print("rand():          " + str(round(rand(), 4)))
+print("rand(5):         " + str([round(v, 3) for v in rand(5)]))
+print("rand(0, 10):     " + str(round(rand(0, 10), 2)))
+print("randn():         " + str(round(randn(), 4)))
+print("randn(4):        " + str([round(v, 3) for v in randn(4)]))
+print("randint(1, 6):   " + str(randint(1, 6)))
+print("randint(1, 6):   " + str(randint(1, 6)))
+
+let deck = [1, 2, 3, 4, 5, 6, 7, 8]
+let shuffled = shuffle(deck)
+print("shuffle([1..8]): " + str(shuffled))
+print("choice([1..8]):  " + str(choice(deck)))
+print("")
+
+# ── 2. Data Preprocessing ────────────────────────────────────────────────────
+print("--- 2. Data Preprocessing ---")
+
+let features = [10.0, 20.0, 30.0, 40.0, 50.0]
+let std_feats = standardize(features)
+print("standardize([10..50]): " + str([round(v, 3) for v in std_feats]))
+
+let matrix = [[3.0, 4.0], [1.0, 0.0], [0.0, 5.0]]
+let normed = normalize_rows(matrix)
+print("normalize_rows row0: " + str([round(v, 4) for v in normed[0]]))
+print("normalize_rows row1: " + str([round(v, 4) for v in normed[1]]))
+
+let X = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+let batches = batch(X, 3)
+print("batch([1..10], 3): " + str(batches))
+
+let (X_train, X_test) = train_test_split(X, 0.2)
+print("train_test_split 80/20:")
+print("  train: " + str(X_train))
+print("  test:  " + str(X_test))
+print("")
+
+# ── 3. Evaluation Metrics ────────────────────────────────────────────────────
+print("--- 3. Evaluation Metrics ---")
+
+let y_pred = [1, 0, 1, 1, 0, 1, 0, 0]
+let y_true = [1, 0, 1, 0, 0, 1, 1, 0]
+
+print("accuracy:  " + str(round(accuracy(y_pred, y_true), 4)))
+print("precision: " + str(round(precision(y_pred, y_true), 4)))
+print("recall:    " + str(round(recall(y_pred, y_true), 4)))
+print("f1_score:  " + str(round(f1_score(y_pred, y_true), 4)))
+
+let y_reg_pred = [2.5, 0.0, 2.0, 8.0]
+let y_reg_true = [3.0, -0.5, 2.0, 7.0]
+print("r2_score:  " + str(round(r2_score(y_reg_pred, y_reg_true), 4)))
+
+let cm = confusion_matrix(y_pred, y_true)
+print("confusion_matrix:")
+for row in cm:
+    print("  " + str(row))
+print("")
+
+# ── 4. ASCII Visualization ───────────────────────────────────────────────────
+print("--- 4. ASCII Plot ---")
+let losses = [0.95, 0.82, 0.71, 0.60, 0.52, 0.45, 0.40, 0.36, 0.33, 0.31,
+              0.29, 0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.21, 0.20]
+print("Training loss curve:")
+plot(losses)
+print("")
+
+print("--- 5. Bar Chart ---")
+let scores = [0.92, 0.87, 0.79, 0.95]
+let models = ["CNN", "RNN", "MLP", "Transformer"]
+print("Model accuracy:")
+bar_chart(scores, models)
+print("")
+
+print("All AI/ML built-ins work!")
