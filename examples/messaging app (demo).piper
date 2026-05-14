@@ -1,0 +1,39 @@
+# ============================================
+#  PiperChat Demo
+#  Run this after starting messaging.piper
+#
+#  Usage:
+#    cargo run -- examples/messaging.piper
+#  Then type these commands one by one:
+# ============================================
+
+# Step 1 — register users
+register Alice
+register Bob
+register Carol
+
+# Step 2 — send messages
+send Alice Bob Hey Bob! How are you?
+send Bob Alice Hi Alice! Doing great, thanks!
+send Carol Alice Alice, are you free tomorrow?
+send Alice Carol Yes! Let's meet at noon.
+send Bob Carol Can I join too?
+
+# Step 3 — explore
+users
+chat Alice Bob
+inbox Carol
+outbox Alice
+stats
+
+# Step 4 — delete a message and check
+delete 3
+inbox Alice
+
+# Step 5 — add a new user and chat
+register Dave
+send Dave Alice Hey Alice, this is Dave!
+chat Alice Dave
+
+# Step 6 — done
+quit
