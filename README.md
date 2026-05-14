@@ -128,9 +128,25 @@ cargo run
 
 ## VS Code Integration
 
-Open the `piper/` folder in VS Code, then press **`Cmd+Shift+B`** to run the currently open `.piper` file. Output appears in the integrated terminal.
+### Step 1 — Install the syntax highlighting extension
 
-For syntax highlighting, install the bundled extension by copying `piper-language/` into `~/.vscode/extensions/` and reloading VS Code.
+**Mac/Linux:**
+```bash
+cp -r vscode-extension ~/.vscode/extensions/piper-language
+```
+
+**Windows:**
+```bash
+xcopy /E /I vscode-extension "%USERPROFILE%\.vscode\extensions\piper-language"
+```
+
+Then reload VS Code (`Cmd+Shift+P` → **Reload Window**).
+
+### Step 2 — Run your `.piper` file
+
+Open the `piper/` folder in VS Code, open any `.piper` file, and press **`Cmd+Shift+B`** (Mac) or **`Ctrl+Shift+B`** (Windows/Linux).
+
+Output appears in the integrated terminal.
 
 ---
 
