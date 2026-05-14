@@ -1,0 +1,36 @@
+# ── Neural Net Forward Pass ── Piper ──
+# 4 inputs → 3 hidden (ReLU) → 2 output (Softmax) → Cross-Entropy Loss
+# Zero imports. Every function is built in.
+
+let X  = [0.5, 0.2, 0.8, 0.1]
+
+let W1 = [[ 0.2, -0.4,  0.1,  0.3],
+          [ 0.5,  0.1, -0.2,  0.4],
+          [-0.1,  0.3,  0.6, -0.3]]
+let b1 = [0.1, -0.1, 0.2]
+
+let W2 = [[ 0.4, -0.3,  0.2],
+          [-0.1,  0.5,  0.3]]
+let b2 = [0.05, -0.05]
+
+# Layer 1: weighted sum + bias + ReLU
+let z1 = vadd([dot(W1[i], X) for i in range(3)], b1)
+let a1 = relu(z1)
+
+# Layer 2: weighted sum + bias + Softmax
+let z2 = vadd([dot(W2[i], a1) for i in range(2)], b2)
+let probs = softmax(z2)
+
+# Cross-entropy loss (true label: class 0)
+let y_true = [1.0, 0.0]
+let loss = cross_entropy(probs, y_true)
+
+print("=== Piper — Neural Net Forward Pass ===")
+print("Input:        " + str(X))
+print("Hidden (ReLU):" + str([round(v, 4) for v in a1]))
+print("Output probs: " + str([round(v, 4) for v in probs]))
+print("Prediction:   class " + str(argmax(probs)))
+print("CE Loss:      " + str(round(loss, 6)))
+print("")
+print("Import lines  : 0")
+print("AI fn calls   : relu, softmax, cross_entropy, argmax, dot, vadd")
