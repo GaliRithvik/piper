@@ -57,7 +57,7 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 - **Tuple unpacking** — `let (loss, acc) = train(X, y)`
 - **`result` implicit return** — set `result = x` instead of `return x`
 - **Short print** — `p(Hello World);` instead of `print("Hello World")`
-- **Rust-powered** — fast tree-walk interpreter (~2× faster than CPython)
+- **Rust-powered** — fast tree-walk interpreter (~2× faster than CPython for compute-heavy loops)
 
 ---
 
@@ -200,8 +200,10 @@ Run it with `cargo run -- examples/demo.piper`
 ### Run a file
 
 ```bash
-cargo run -- examples/demo.piper
-cargo run -- examples/ai_demo.piper
+cargo run -- examples/demo.piper              # full language demo (14 sections)
+cargo run -- examples/ai_demo.piper           # AI/ML activations, vectors, loss
+cargo run -- examples/nim_features_test.piper # v0.5: .., case/of, tuples, result
+cargo run -- examples/aiml_builtins_test.piper # v0.6: random, metrics, plot
 ```
 
 ### Start the REPL
@@ -245,7 +247,7 @@ piper/
 │   ├── main.rs                   # CLI entry point + REPL
 │   ├── lexer.rs                  # Tokenizer
 │   ├── parser.rs                 # AST + recursive descent parser
-│   └── interpreter.rs            # Tree-walk interpreter (70+ built-ins)
+│   └── interpreter.rs            # Tree-walk interpreter (90+ built-ins)
 │
 ├── examples/
 │   ├── demo.piper                # Full language demo (14 sections)
