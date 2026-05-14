@@ -128,7 +128,7 @@ Run it with `cargo run -- examples/demo.piper`
 | 1 | **Variables & Arithmetic** | `let`, math ops, `round()`, `str()` | `Rectangle: 12 x 5 = 60`, `Circle area: 153.94` |
 | 2 | **Strings** | `len`, `upper`, `lower`, `trim`, `split`, `join` | `PIPER -> piper`, `Split: [one, two, three]` |
 | 3 | **Conditionals** | `if / elif / else` | `Temperature: 28C → Warm and pleasant.` |
-| 4 | **Functions** | `fn`, recursion, `greet()`, `factorial()` | `Hello, Piper!`, `7! = 5040` |
+| 4 | **Functions & Default Params** | `fn`, recursion, default args `fn greet(name, msg="Hello")` | `Hello, Piper!`, `Hi, Rithvik!`, `7! = 5040` |
 | 5 | **For Loop** | `for`, `range()`, prime sieve | `Primes up to 30: 2 3 5 7 11 13 17 19 23 29` |
 | 6 | **While Loop** | `while`, FizzBuzz | `Fizz`, `Buzz`, `FizzBuzz` for 1–20 |
 | 7 | **List Comprehensions** | `[x*x for x in ...]`, filter with `if` | `Squares: [1, 4, 9, 16, 25]` |
@@ -137,6 +137,8 @@ Run it with `cargo run -- examples/demo.piper`
 | 10 | **break / continue** | skip evens, stop at multiple of 7 | `1 3 5 7`, `Stopped at 7, Total = 21` |
 | 11 | **Higher-order Functions** | `map`, `filter`, `reduce`, `enumerate` | `map(double): [2,4,6,8...]`, `reduce(add): 36` |
 | 12 | **try / except** | catch errors, `safe_divide` with error handling | `Caught: Index 99 out of bounds`, `10/2 = 5` |
+| 13 | **Negative Indexing** | `arr[-1]`, `s[-2]`, negative index assignment | `Last: purple`, `After: [red, ..., pink]` |
+| 14 | **Slicing** | `arr[2:5]`, `arr[:4]`, `arr[-3:]`, `arr[1:-1]`, string slices | `[30, 40, 50]`, `phrase[7:12]: Piper` |
 
 ---
 
