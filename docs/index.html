@@ -82,6 +82,11 @@
       transition: all 0.15s;
     }
     .example-btn:hover { background: #2d3148; color: #e2e8f0; }
+    .example-btn.new {
+      border-color: #4c1d95;
+      color: #a78bfa;
+    }
+    .example-btn.new:hover { background: #2d1b4e; color: #c4b5fd; }
 
     .workspace {
       display: flex;
@@ -166,24 +171,29 @@
 
 <header>
   <h1>Piper Playground</h1>
-  <span>v0.1.0</span>
-  <button class="run-btn" id="runBtn" onclick="runCode()">▶ Run</button>
+  <span>v0.9.0</span>
+  <button class="run-btn" id="runBtn" onclick="runCode()">&#9654; Run</button>
 </header>
 
 <div class="examples-bar">
   <span>Examples:</span>
   <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
   <button class="example-btn" onclick="loadExample('fib')">Fibonacci</button>
-  <button class="example-btn" onclick="loadExample('class')">Classes</button>
   <button class="example-btn" onclick="loadExample('list')">List Ops</button>
   <button class="example-btn" onclick="loadExample('pipe')">Pipe |></button>
   <button class="example-btn" onclick="loadExample('lambda')">Lambdas</button>
+  <button class="example-btn new" onclick="loadExample('inheritance')">Inheritance ✦</button>
+  <button class="example-btn new" onclick="loadExample('closures')">Closures ✦</button>
+  <button class="example-btn new" onclick="loadExample('nullsafe')">?? &amp; ?. ✦</button>
+  <button class="example-btn new" onclick="loadExample('dictcomp')">Dict Comp ✦</button>
+  <button class="example-btn new" onclick="loadExample('varargs')">*args &amp; kwargs ✦</button>
+  <button class="example-btn" onclick="loadExample('ai')">AI / ML</button>
   <button class="example-btn" onclick="loadExample('messaging')">Messaging App</button>
 </div>
 
 <div class="workspace">
   <div class="pane">
-    <div class="pane-label">Editor</div>
+    <div class="pane-label">Editor — Cmd/Ctrl+Enter to run</div>
     <textarea id="editor" spellcheck="false" placeholder="Write Piper code here..."></textarea>
   </div>
   <div class="divider"></div>
@@ -206,7 +216,7 @@
     await init();
     window._piperReady = true;
     window._runPiper = run_piper;
-    document.getElementById('output').textContent = 'Piper is ready. Write some code and click Run!';
+    document.getElementById('output').textContent = 'Piper v0.9.0 is ready. Write some code and click Run!';
     document.getElementById('output').className = '';
   } catch (e) {
     document.getElementById('output').textContent = 'Failed to load Piper: ' + e.message;
@@ -221,6 +231,18 @@
 let name = "World"
 print("Hello, " + name + "!")
 
+# Escape sequences in strings
+let msg = "Line 1\\nLine 2\\nLine 3"
+print(msg)
+
+# Triple-quoted multi-line strings
+let poem = """Roses are red,
+Violets are blue,
+Piper is fast,
+And easy too."""
+print(poem)
+
+# F-strings
 for i in 1..5:
     print(f"Count: {i}")`,
 
@@ -231,23 +253,6 @@ fn fib(n):
 
 for i in 0..10:
     print(f"fib({i}) = {fib(i)}")`,
-
-    class: `# Classes in Piper
-class Animal:
-    fn init(self, name, sound):
-        self.name = name
-        self.sound = sound
-
-    fn speak(self):
-        print(f"{self.name} says: {self.sound}!")
-
-let dog = Animal("Dog", "Woof")
-let cat = Animal("Cat", "Meow")
-let cow = Animal("Cow", "Moo")
-
-dog.speak()
-cat.speak()
-cow.speak()`,
 
     list: `# List operations
 let nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
@@ -262,48 +267,284 @@ let squares = [x * x for x in 1..8]
 print("Squares:  " + str(squares))
 
 let evens = [x for x in nums if x % 2 == 0]
-print("Evens:    " + str(evens))`,
+print("Evens:    " + str(evens))
+
+# Slicing with step
+let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+print("Every other: " + str(data[::2]))
+print("Reversed:    " + str(data[::-1]))
+print("1..8 step 2: " + str(data[1:8:2]))
+
+# Sort with key function
+let words = ["banana", "apple", "cherry", "fig"]
+print("Sort by length: " + str(sort(words, fn(w) => len(w))))`,
 
     pipe: `# Pipe operator |>
 fn double(x): return x * 2
 fn add_one(x): return x + 1
 
-# Without pipe
-print(str(sum([1, 2, 3, 4, 5])))
-
-# With pipe
+# Chain transformations elegantly
 [1, 2, 3, 4, 5] |> sum |> str |> print
 
-# Chain transformations
-let result = [1, 2, 3, 4, 5]
-    |> sum
+let result = [1, 2, 3, 4, 5] |> sum
 print("Sum via pipe: " + str(result))
 
-# Sort and reverse
+# Sort and reverse with pipe
 let data = [5, 2, 8, 1, 9, 3]
 let sorted = data |> sort |> reverse
-print("Sorted desc: " + str(sorted))`,
+print("Sorted desc: " + str(sorted))
+
+# Pipe into map/filter
+let processed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    |> sum
+print("Total: " + str(processed))`,
 
     lambda: `# Lambda / anonymous functions
-fn apply(f, x): return f(x)
-
 let double = fn(x) => x * 2
 let square = fn(x) => x * x
+let add    = fn(a, b) => a + b
 
 print("double(5) =", str(double(5)))
 print("square(4) =", str(square(4)))
-print("apply(double, 7) =", str(apply(double, 7)))
+print("add(3, 7) =", str(add(3, 7)))
 
 # Use lambdas with map, filter, reduce
 let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-let evens  = filter(nums, fn(x) => x % 2 == 0)
+let evens   = filter(nums, fn(x) => x % 2 == 0)
 let squares = map(evens, fn(x) => x * x)
+let total   = reduce(squares, fn(a, b) => a + b)
 print("Even squares:", str(squares))
+print("Their sum:   ", str(total))
 
-# Slice with step
-let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-print("Every other:", str(data[::2]))
-print("Reversed:   ", str(data[::-1]))`,
+# Higher-order functions
+fn apply(f, x): return f(x)
+fn compose(f, g): return fn(x) => f(g(x))
+
+let double_then_square = compose(square, double)
+print("compose(square, double)(3) =", str(double_then_square(3)))`,
+
+    inheritance: `# Inheritance & OOP (v0.9.0)
+
+class Animal:
+    fn init(self, name, sound):
+        self.name = name
+        self.sound = sound
+
+    fn speak(self):
+        print(self.name + " says: " + self.sound + "!")
+
+    fn __str__(self):
+        return "Animal(" + self.name + ")"
+
+class Dog(Animal):
+    fn init(self, name):
+        super.init(self, name, "Woof")
+        self.tricks = []
+
+    fn learn(self, trick):
+        append(self.tricks, trick)
+        print(self.name + " learned: " + trick)
+
+    fn show_tricks(self):
+        print(self.name + "'s tricks: " + str(self.tricks))
+
+    fn __str__(self):
+        return "Dog(" + self.name + ")"
+
+class Cat(Animal):
+    fn init(self, name):
+        super.init(self, name, "Meow")
+        self.indoor = true
+
+    fn __str__(self):
+        return "Cat(" + self.name + ")"
+
+# Create instances
+let rex = Dog("Rex")
+let whiskers = Cat("Whiskers")
+
+rex.speak()
+whiskers.speak()
+
+rex.learn("sit")
+rex.learn("shake")
+rex.show_tricks()
+
+# __str__ is used by print() and str()
+print(str(rex))
+print(str(whiskers))
+
+# Static method example
+class MathUtils:
+    static fn add(a, b): return a + b
+    static fn square(x): return x * x
+
+print("static add(3, 4) =", str(MathUtils.add(3, 4)))
+print("static square(5) =", str(MathUtils.square(5)))`,
+
+    closures: `# Closures — lambdas capture outer scope (v0.9.0)
+
+fn make_adder(n):
+    return fn(x) => x + n
+
+fn make_multiplier(n):
+    return fn(x) => x * n
+
+fn make_counter():
+    let count = 0
+    return fn(step) => step
+
+let add5  = make_adder(5)
+let add10 = make_adder(10)
+let triple = make_multiplier(3)
+
+print("add5(7)   =", str(add5(7)))
+print("add10(7)  =", str(add10(7)))
+print("triple(6) =", str(triple(6)))
+
+# Compose two closures
+fn compose(f, g):
+    return fn(x) => f(g(x))
+
+let add5_then_triple = compose(triple, add5)
+print("triple(add5(4)) =", str(add5_then_triple(4)))
+
+# *args — variadic functions
+fn sum_all(*nums):
+    let total = 0
+    for n in nums:
+        total += n
+    return total
+
+print("sum_all(1,2,3,4,5) =", str(sum_all(1, 2, 3, 4, 5)))
+print("sum_all(10,20)     =", str(sum_all(10, 20)))`,
+
+    nullsafe: `# Null coalescing ?? and optional chaining ?. (v0.9.0)
+
+# ?? returns right side when left is none
+let a = none
+let b = 42
+
+print(a ?? "default")    # default
+print(b ?? "default")    # 42
+print(none ?? none ?? "fallback")  # fallback
+
+# Chained coalescing
+fn get_config(key):
+    if key == "port": return 8080
+    return none
+
+let port    = get_config("port") ?? 3000
+let timeout = get_config("timeout") ?? 30
+
+print("port:    " + str(port))
+print("timeout: " + str(timeout))
+
+# ?. returns none instead of crashing on nil
+class User:
+    fn init(self, name, email):
+        self.name = name
+        self.email = email
+
+let user = User("Alice", "alice@example.com")
+let ghost = none
+
+print(user?.name)    # Alice
+print(ghost?.name)   # none
+
+# Combine ?? and ?.
+let display = ghost?.name ?? "Anonymous"
+print("Display name: " + display)`,
+
+    dictcomp: `# Dict comprehensions (v0.9.0)
+
+# Basic dict comprehension
+let squares = {x: x*x for x in range(1, 6)}
+print("Squares:", str(squares))
+
+# With condition
+let even_squares = {x: x*x for x in range(1, 11) if x % 2 == 0}
+print("Even squares:", str(even_squares))
+
+# String keys
+let words = ["apple", "banana", "cherry"]
+let lengths = {w: len(w) for w in words}
+print("Word lengths:", str(lengths))
+
+# Invert a mapping
+let scores = {"Alice": 95, "Bob": 87, "Carol": 92}
+print("Keys:  ", str(keys(scores)))
+print("Values:", str(values(scores)))
+
+# Access and update
+scores["Dave"] = 88
+print("After adding Dave:", str(keys(scores)))
+print("Alice's score:", str(scores["Alice"]))
+
+# has_key, get, del_key
+print("Has Eve?", str(has_key(scores, "Eve")))
+print("Bob's score:", str(get(scores, "Bob", 0)))`,
+
+    varargs: `# *args variadic params & named arguments (v0.9.0)
+
+# *args collects all positional args into a list
+fn sum_all(*nums):
+    let total = 0
+    for n in nums:
+        total += n
+    return total
+
+print("sum_all(1,2,3)       =", str(sum_all(1, 2, 3)))
+print("sum_all(10,20,30,40) =", str(sum_all(10, 20, 30, 40)))
+
+fn join_words(*words):
+    return join(", ", words)
+
+print(join_words("alpha", "beta", "gamma"))
+
+# Named arguments — pass in any order
+fn greet(name, greeting="Hello", punct="!"):
+    print(greeting + ", " + name + punct)
+
+greet("Alice")
+greet("Bob", greeting="Hi")
+greet(name="Carol", greeting="Hey", punct="~")
+greet(punct=".", greeting="Good day", name="Dave")
+
+# Mix positional and named
+fn describe(item, color="red", size="medium"):
+    print(f"A {size} {color} {item}")
+
+describe("apple")
+describe("car", color="blue", size="large")
+describe("hat", size="small")`,
+
+    ai: `# AI / ML built-ins
+let z = [-2.0, -1.0, 0.0, 1.0, 2.0]
+
+print("relu:    ", str(relu(z)))
+print("sigmoid: ", str(map(z, fn(x) => round(sigmoid(x), 4))))
+print("softmax: ", str(map(softmax([1.5, 0.8, 2.3]), fn(x) => round(x, 4))))
+
+# Matrix ops
+let A = [[1, 2], [3, 4]]
+let B = [[5, 6], [7, 8]]
+let C = matmul(A, B)
+print("matmul:", str(C))
+print("transpose:", str(transpose(A)))
+
+# Stats
+let data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+print("mean:    ", str(mean(data)))
+print("std:     ", str(round(std(data), 4)))
+print("median:  ", str(median(data)))
+
+# Random (seeded for reproducibility)
+seed(42)
+print("rand:    ", str(round(rand(), 4)))
+print("randint: ", str(randint(1, 100)))
+let v = randn(5)
+print("randn:   ", str(map(v, fn(x) => round(x, 3))))`,
 
     messaging: `# PiperChat — Messaging App Demo
 class Message:
@@ -313,8 +554,8 @@ class Message:
         self.recipient = recipient
         self.content = content
 
-    fn display(self):
-        print(f"  [#{self.id}] {self.sender} -> {self.recipient}: {self.content}")
+    fn __str__(self):
+        return f"[#{self.id}] {self.sender} -> {self.recipient}: {self.content}"
 
 class Chat:
     fn init(self):
@@ -330,7 +571,7 @@ class Chat:
         let msg = Message(self.next_id, sender, recipient, content)
         append(self.messages, msg)
         self.next_id += 1
-        print(f"Sent [#{msg.id}]: {sender} -> {recipient}: {content}")
+        print("Sent " + str(msg))
 
     fn show_chat(self, u1, u2):
         print(f"--- {u1} <-> {u2} ---")
@@ -338,7 +579,7 @@ class Chat:
             let fwd = msg.sender == u1 and msg.recipient == u2
             let rev = msg.sender == u2 and msg.recipient == u1
             if fwd or rev:
-                msg.display()
+                print("  " + str(msg))
 
 let app = Chat()
 app.register("Alice")

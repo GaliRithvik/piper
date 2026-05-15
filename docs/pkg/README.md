@@ -226,9 +226,10 @@ piper/
 │       └── piper.d.ts            # TypeScript type declarations
 │
 ├── examples/
-│   ├── demo.piper                # Full language demo (14 sections)
+│   ├── demo.piper                # Full language demo
 │   ├── ai_demo.piper             # AI/ML showcase
 │   ├── messaging.piper           # PiperChat — CLI messaging app
+│   ├── messaging app (demo).piper # Interactive messaging demo
 │   ├── nn_forward.piper          # Neural net forward pass in Piper
 │   ├── nn_forward.py             # Same in Python (comparison)
 │   ├── nim_features_test.piper   # v0.5 features: .., case/of, tuples, result
@@ -237,7 +238,8 @@ piper/
 │   ├── classes_test.piper        # v0.7 class syntax
 │   ├── benchmark.piper           # Performance benchmark
 │   ├── benchmark_pure.py         # Pure Python benchmark
-│   └── benchmark_numpy.py        # NumPy benchmark
+│   ├── benchmark_numpy.py        # NumPy benchmark
+│   └── generate_chart.py         # Generates performance_chart.png
 │
 ├── vscode-extension/             # VS Code syntax highlighting (install locally)
 │   ├── package.json
@@ -247,7 +249,7 @@ piper/
 │
 ├── performance_chart.png         # Benchmark bar chart + Big-O zone chart
 ├── PERFORMANCE.md                # Benchmark results and Big-O analysis
-├── LANGUAGE.md                   # Full language reference (17 sections)
+├── LANGUAGE.md                   # Full language reference (20 sections)
 └── .vscode/
     └── tasks.json                # Run current file with Cmd+Shift+B
 ```
