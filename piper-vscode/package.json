@@ -1,0 +1,110 @@
+{
+  "name": "piper-lang",
+  "displayName": "Piper Language",
+  "description": "Syntax highlighting, formatting, and run support for the Piper language (.piper files)",
+  "version": "0.9.0",
+  "publisher": "GaliRithvik",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GaliRithvik/piper"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Other"
+  ],
+  "keywords": ["piper", "piper-lang", "piper language", "scripting"],
+  "activationEvents": [
+    "onLanguage:piper"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "piper",
+        "aliases": ["Piper", "piper"],
+        "extensions": [".piper"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "piper",
+        "scopeName": "source.piper",
+        "path": "./syntaxes/piper.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "piper.runFile",
+        "title": "Piper: Run File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "piper.formatFile",
+        "title": "Piper: Format File",
+        "icon": "$(symbol-keyword)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "piper.runFile",
+          "when": "resourceExtname == .piper",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "piper.runFile",
+          "when": "resourceExtname == .piper",
+          "group": "piper@1"
+        },
+        {
+          "command": "piper.formatFile",
+          "when": "resourceExtname == .piper",
+          "group": "piper@2"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "piper.runFile",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == piper"
+      },
+      {
+        "command": "piper.formatFile",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i",
+        "when": "editorLangId == piper"
+      }
+    ],
+    "configuration": {
+      "title": "Piper",
+      "properties": {
+        "piper.executablePath": {
+          "type": "string",
+          "default": "piper",
+          "description": "Path to the piper executable. Defaults to 'piper' (must be on PATH)."
+        },
+        "piper.formatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run `piper fmt` automatically when saving a .piper file."
+        },
+        "piper.reuseTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reuse the same terminal panel when running Piper files."
+        }
+      }
+    }
+  }
+}

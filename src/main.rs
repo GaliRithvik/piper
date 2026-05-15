@@ -2,6 +2,7 @@ mod lexer;
 mod parser;
 mod interpreter;
 mod server;
+mod formatter;
 
 use std::env;
 use std::fs;
@@ -11,7 +12,31 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     match args.get(1).map(|s| s.as_str()) {
         None | Some("repl") => run_repl(),
-        Some(path)          => run_file(path),
+        Some("fmt") => match args.get(2) {
+            Some(path) => run_fmt(path),
+            None => { eprintln!("Usage: piper fmt <file.piper>"); std::process::exit(1); }
+        },
+        Some("version") | Some("--version") | Some("-V") => {
+            println!("piper 0.9.0");
+        }
+        Some(path) => run_file(path),
+    }
+}
+
+fn run_fmt(path: &str) {
+    let source = fs::read_to_string(path).unwrap_or_else(|_| {
+        eprintln!("piper fmt: cannot read '{}'", path);
+        std::process::exit(1);
+    });
+    let formatted = formatter::format_source(&source);
+    if formatted == source {
+        println!("piper fmt: {} — already formatted.", path);
+    } else {
+        fs::write(path, &formatted).unwrap_or_else(|e| {
+            eprintln!("piper fmt: cannot write '{}': {}", path, e);
+            std::process::exit(1);
+        });
+        println!("piper fmt: {} — formatted.", path);
     }
 }
 
