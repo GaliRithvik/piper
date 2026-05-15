@@ -14,40 +14,32 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
+    /* ── Header ─────────────────────────────────────── */
     header {
       background: #1a1d2e;
       border-bottom: 1px solid #2d3148;
-      padding: 14px 24px;
+      padding: 12px 20px;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
+      flex-shrink: 0;
+      z-index: 10;
     }
 
-    header h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #a78bfa;
-      letter-spacing: -0.02em;
-    }
-
-    header span {
-      font-size: 0.75rem;
-      background: #2d3148;
-      color: #94a3b8;
-      padding: 2px 8px;
-      border-radius: 99px;
-    }
+    header h1 { font-size: 1.15rem; font-weight: 700; color: #a78bfa; letter-spacing: -0.02em; }
+    header .badge { font-size: 0.7rem; background: #2d3148; color: #94a3b8; padding: 2px 8px; border-radius: 99px; }
 
     .run-btn {
       margin-left: auto;
       background: #7c3aed;
       color: white;
       border: none;
-      padding: 8px 20px;
-      border-radius: 8px;
-      font-size: 0.9rem;
+      padding: 7px 18px;
+      border-radius: 7px;
+      font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.15s;
@@ -55,39 +47,91 @@
     .run-btn:hover { background: #6d28d9; }
     .run-btn:disabled { background: #4c1d95; opacity: 0.5; cursor: not-allowed; }
 
-    .examples-bar {
-      background: #13162a;
-      border-bottom: 1px solid #2d3148;
-      padding: 8px 24px;
+    /* ── Body ───────────────────────────────────────── */
+    .body {
       display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+      flex: 1;
+      overflow: hidden;
     }
 
-    .examples-bar span {
+    /* ── Sidebar ────────────────────────────────────── */
+    .sidebar {
+      width: 218px;
+      min-width: 218px;
+      background: #12152a;
+      border-right: 1px solid #1e2235;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 4px; }
+
+    .sidebar-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #475569;
+      padding: 12px 14px 6px;
+      font-weight: 600;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      padding: 7px 14px;
+      cursor: pointer;
+      user-select: none;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      font-weight: 600;
+      gap: 6px;
+      transition: color 0.12s;
+    }
+    .section-header:hover { color: #e2e8f0; }
+    .section-header .chevron {
+      font-size: 0.6rem;
+      color: #475569;
+      transition: transform 0.2s;
+      margin-left: auto;
+    }
+    .section-header.open .chevron { transform: rotate(90deg); }
+    .section-icon { font-size: 0.8rem; }
+
+    .section-items {
+      display: none;
+      flex-direction: column;
+    }
+    .section-items.open { display: flex; }
+
+    .sidebar-item {
+      padding: 5px 14px 5px 32px;
       font-size: 0.75rem;
       color: #64748b;
-      margin-right: 4px;
-    }
-
-    .example-btn {
-      background: #1e2235;
-      color: #94a3b8;
-      border: 1px solid #2d3148;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 0.78rem;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.12s;
+      border-left: 2px solid transparent;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .example-btn:hover { background: #2d3148; color: #e2e8f0; }
-    .example-btn.new {
-      border-color: #4c1d95;
+    .sidebar-item:hover { color: #c4b5fd; background: #1a1d35; }
+    .sidebar-item.active {
       color: #a78bfa;
+      background: #1e1b3a;
+      border-left-color: #7c3aed;
     }
-    .example-btn.new:hover { background: #2d1b4e; color: #c4b5fd; }
 
+    .sidebar-divider {
+      height: 1px;
+      background: #1e2235;
+      margin: 4px 0;
+    }
+
+    /* ── Workspace ──────────────────────────────────── */
     .workspace {
       display: flex;
       flex: 1;
@@ -99,22 +143,26 @@
       flex-direction: column;
       flex: 1;
       overflow: hidden;
+      min-width: 0;
     }
 
     .pane-label {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: #475569;
-      padding: 8px 16px;
+      padding: 7px 16px;
       background: #13162a;
       border-bottom: 1px solid #1e2235;
+      flex-shrink: 0;
     }
 
     .divider {
       width: 4px;
       background: #1e2235;
       cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
     }
     .divider:hover { background: #7c3aed; }
 
@@ -123,10 +171,10 @@
       background: #0f1117;
       color: #e2e8f0;
       border: none;
-      padding: 16px;
+      padding: 14px 16px;
       font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-      font-size: 0.9rem;
-      line-height: 1.6;
+      font-size: 0.875rem;
+      line-height: 1.65;
       resize: none;
       outline: none;
       tab-size: 4;
@@ -136,32 +184,34 @@
       flex: 1;
       background: #090c14;
       color: #a3e635;
-      padding: 16px;
+      padding: 14px 16px;
       font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-      font-size: 0.875rem;
-      line-height: 1.6;
+      font-size: 0.85rem;
+      line-height: 1.65;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-word;
     }
 
-    #output.error { color: #f87171; }
+    #output.error   { color: #f87171; }
     #output.waiting { color: #475569; font-style: italic; }
 
+    /* ── Footer ─────────────────────────────────────── */
     footer {
       background: #1a1d2e;
       border-top: 1px solid #2d3148;
-      padding: 8px 24px;
-      font-size: 0.72rem;
+      padding: 7px 20px;
+      font-size: 0.7rem;
       color: #475569;
       display: flex;
       gap: 16px;
+      flex-shrink: 0;
     }
-
     footer a { color: #7c3aed; text-decoration: none; }
     footer a:hover { text-decoration: underline; }
 
-    @media (max-width: 640px) {
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
       .workspace { flex-direction: column; }
       .divider { width: 100%; height: 4px; cursor: row-resize; }
     }
@@ -171,36 +221,202 @@
 
 <header>
   <h1>Piper Playground</h1>
-  <span>v0.9.0</span>
+  <span class="badge">v0.9.0</span>
   <button class="run-btn" id="runBtn" onclick="runCode()">&#9654; Run</button>
 </header>
 
-<div class="examples-bar">
-  <span>Examples:</span>
-  <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
-  <button class="example-btn" onclick="loadExample('fib')">Fibonacci</button>
-  <button class="example-btn" onclick="loadExample('list')">List Ops</button>
-  <button class="example-btn" onclick="loadExample('pipe')">Pipe |></button>
-  <button class="example-btn" onclick="loadExample('lambda')">Lambdas</button>
-  <button class="example-btn new" onclick="loadExample('inheritance')">Inheritance ✦</button>
-  <button class="example-btn new" onclick="loadExample('closures')">Closures ✦</button>
-  <button class="example-btn new" onclick="loadExample('nullsafe')">?? &amp; ?. ✦</button>
-  <button class="example-btn new" onclick="loadExample('dictcomp')">Dict Comp ✦</button>
-  <button class="example-btn new" onclick="loadExample('varargs')">*args &amp; kwargs ✦</button>
-  <button class="example-btn" onclick="loadExample('ai')">AI / ML</button>
-  <button class="example-btn" onclick="loadExample('messaging')">Messaging App</button>
-</div>
+<div class="body">
 
-<div class="workspace">
-  <div class="pane">
-    <div class="pane-label">Editor — Cmd/Ctrl+Enter to run</div>
-    <textarea id="editor" spellcheck="false" placeholder="Write Piper code here..."></textarea>
+  <!-- ── Left Sidebar ─────────────────────────────── -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-title">Syntax Reference</div>
+
+    <!-- Basics -->
+    <div class="section-header open" onclick="toggleSection(this)">
+      <span class="section-icon">📝</span> Basics
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items open">
+      <div class="sidebar-item active" onclick="load('hello_world')">Hello World</div>
+      <div class="sidebar-item" onclick="load('variables')">Variables &amp; Types</div>
+      <div class="sidebar-item" onclick="load('strings')">Strings &amp; F-strings</div>
+      <div class="sidebar-item" onclick="load('escape_seqs')">Escape Sequences</div>
+      <div class="sidebar-item" onclick="load('triple_strings')">Triple-quoted Strings</div>
+      <div class="sidebar-item" onclick="load('comments')">Comments</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Control Flow -->
+    <div class="section-header open" onclick="toggleSection(this)">
+      <span class="section-icon">🔀</span> Control Flow
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items open">
+      <div class="sidebar-item" onclick="load('if_elif_else')">If / Elif / Else</div>
+      <div class="sidebar-item" onclick="load('while_loop')">While Loop</div>
+      <div class="sidebar-item" onclick="load('for_loop')">For Loop</div>
+      <div class="sidebar-item" onclick="load('ranges')">Ranges</div>
+      <div class="sidebar-item" onclick="load('break_continue')">Break &amp; Continue</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Functions -->
+    <div class="section-header open" onclick="toggleSection(this)">
+      <span class="section-icon">⚡</span> Functions
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items open">
+      <div class="sidebar-item" onclick="load('basic_functions')">Basic Functions</div>
+      <div class="sidebar-item" onclick="load('lambdas')">Lambdas</div>
+      <div class="sidebar-item" onclick="load('varargs')">*args Variadic</div>
+      <div class="sidebar-item" onclick="load('named_args')">Named Arguments</div>
+      <div class="sidebar-item" onclick="load('closures')">Closures</div>
+      <div class="sidebar-item" onclick="load('higher_order')">Higher-order Fns</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Collections -->
+    <div class="section-header open" onclick="toggleSection(this)">
+      <span class="section-icon">📦</span> Collections
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items open">
+      <div class="sidebar-item" onclick="load('lists')">Lists</div>
+      <div class="sidebar-item" onclick="load('list_comp')">List Comprehensions</div>
+      <div class="sidebar-item" onclick="load('slicing')">Slicing</div>
+      <div class="sidebar-item" onclick="load('dicts')">Dicts</div>
+      <div class="sidebar-item" onclick="load('dict_comp')">Dict Comprehensions</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Operators -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">🔧</span> Operators
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('pipe_op')">Pipe |&gt;</div>
+      <div class="sidebar-item" onclick="load('null_coalesce')">Null Coalescing ??</div>
+      <div class="sidebar-item" onclick="load('optional_chain')">Optional Chaining ?.</div>
+      <div class="sidebar-item" onclick="load('arithmetic')">Arithmetic &amp; Logic</div>
+      <div class="sidebar-item" onclick="load('augmented_assign')">Augmented Assign</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Classes & OOP -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">🏗️</span> Classes &amp; OOP
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('classes')">Classes &amp; Methods</div>
+      <div class="sidebar-item" onclick="load('inheritance')">Inheritance</div>
+      <div class="sidebar-item" onclick="load('static_methods')">Static Methods</div>
+      <div class="sidebar-item" onclick="load('dunder_str')">__str__ &amp; str()</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Built-ins: Math -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">🔢</span> Math &amp; Numbers
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('math_basic')">abs, round, floor, ceil</div>
+      <div class="sidebar-item" onclick="load('math_power')">pow, sqrt, log, exp</div>
+      <div class="sidebar-item" onclick="load('math_trig')">sin, cos, tan, pi, e</div>
+      <div class="sidebar-item" onclick="load('math_minmax')">min, max, clamp</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Built-ins: Strings -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">🔤</span> String Built-ins
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('str_case')">upper, lower, title</div>
+      <div class="sidebar-item" onclick="load('str_search')">contains, starts, ends</div>
+      <div class="sidebar-item" onclick="load('str_modify')">split, join, trim, replace</div>
+      <div class="sidebar-item" onclick="load('str_format')">len, pad, repeat</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Built-ins: Lists -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">📋</span> List Built-ins
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('list_ops')">append, pop, insert</div>
+      <div class="sidebar-item" onclick="load('list_sort')">sort, reverse, unique</div>
+      <div class="sidebar-item" onclick="load('list_search')">contains, index, count</div>
+      <div class="sidebar-item" onclick="load('list_hof')">map, filter, reduce</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Built-ins: Dict -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">🗂️</span> Dict Built-ins
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('dict_ops')">keys, values, has_key</div>
+      <div class="sidebar-item" onclick="load('dict_get_del')">get, del_key, merge</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- AI / ML -->
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">🤖</span> AI / ML
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items">
+      <div class="sidebar-item" onclick="load('activations')">relu, sigmoid, softmax</div>
+      <div class="sidebar-item" onclick="load('matrix_ops')">matmul, transpose, dot</div>
+      <div class="sidebar-item" onclick="load('stats')">mean, std, median</div>
+      <div class="sidebar-item" onclick="load('random')">rand, randint, randn, seed</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Full Examples -->
+    <div class="section-header open" onclick="toggleSection(this)">
+      <span class="section-icon">🚀</span> Full Examples
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-items open">
+      <div class="sidebar-item" onclick="load('ex_fibonacci')">Fibonacci</div>
+      <div class="sidebar-item" onclick="load('ex_list_ops')">List Operations</div>
+      <div class="sidebar-item" onclick="load('ex_ai')">AI / ML Demo</div>
+      <div class="sidebar-item" onclick="load('ex_messaging')">Messaging App</div>
+    </div>
+
+  </nav>
+
+  <!-- ── Main workspace ──────────────────────────── -->
+  <div class="workspace">
+    <div class="pane">
+      <div class="pane-label">Editor — Cmd/Ctrl+Enter to run</div>
+      <textarea id="editor" spellcheck="false" placeholder="Write Piper code here..."></textarea>
+    </div>
+    <div class="divider" id="divider"></div>
+    <div class="pane">
+      <div class="pane-label">Output</div>
+      <div id="output" class="waiting">Output will appear here after you click Run.</div>
+    </div>
   </div>
-  <div class="divider"></div>
-  <div class="pane">
-    <div class="pane-label">Output</div>
-    <div id="output" class="waiting">Output will appear here after you click Run.</div>
-  </div>
+
 </div>
 
 <footer>
@@ -209,122 +425,626 @@
   <a href="https://github.com/GaliRithvik/piper/blob/main/LANGUAGE.md" target="_blank">Docs</a>
 </footer>
 
+<!-- ── WASM init ──────────────────────────────────── -->
 <script type="module">
   import init, { run_piper } from './pkg/piper.js';
-
   try {
     await init();
     window._piperReady = true;
     window._runPiper = run_piper;
-    document.getElementById('output').textContent = 'Piper v0.9.0 is ready. Write some code and click Run!';
+    document.getElementById('output').textContent = 'Piper v0.9.0 ready. Pick a topic from the sidebar or click ▶ Run.';
     document.getElementById('output').className = '';
   } catch (e) {
-    document.getElementById('output').textContent = 'Failed to load Piper: ' + e.message;
+    document.getElementById('output').textContent = 'Failed to load Piper WASM: ' + e.message;
     document.getElementById('output').className = 'error';
-    console.error('Piper WASM init failed:', e);
+    console.error(e);
   }
 </script>
 
+<!-- ── Snippets + UI logic ───────────────────────── -->
 <script>
-  const EXAMPLES = {
-    hello: `# Hello, Piper!
-let name = "World"
+// ── All syntax snippets ─────────────────────────────────────────────────────
+const SNIPPETS = {
+
+  // ── Basics ──────────────────────────────────────────────────────────────
+
+  hello_world: `# Hello, Piper!
+print("Hello, World!")
+
+let name = "Piper"
 print("Hello, " + name + "!")
 
-# Escape sequences in strings
-let msg = "Line 1\\nLine 2\\nLine 3"
-print(msg)
+# F-string
+print(f"Greetings from {name} v0.9.0")`,
 
-# Triple-quoted multi-line strings
+  variables: `# Variables — dynamically typed
+let x = 42          # integer (number)
+let pi = 3.14159     # float
+let name = "Piper"   # string
+let flag = true      # boolean
+let nothing = none   # null / nil
+
+print(x, pi, name, flag, nothing)
+
+# Reassignment
+x = x + 1
+print("x is now:", str(x))
+
+# Type coercion
+print("number to str: " + str(x))
+print("str to number: " + str(int("99")))
+print("float:         " + str(float("3.14")))`,
+
+  strings: `# Strings and F-strings
+let s = "Hello, World!"
+print(s)
+print(len(s))          # length
+
+# F-strings — embed expressions
+let a = 10
+let b = 20
+print(f"a + b = {a + b}")
+print(f"PI ≈ {round(3.14159, 2)}")
+
+let user = "Alice"
+let score = 98.5
+print(f"Player: {user} | Score: {score}")`,
+
+  escape_seqs: `# Escape sequences
+print("Line 1\\nLine 2\\nLine 3")
+print("Tab\\there")
+print("Quote: \\"hello\\"")
+print("Backslash: \\\\")
+
+let path = "C:\\\\Users\\\\Alice\\\\docs"
+print(path)
+
+# Escaped newlines in strings
+let msg = "First line.\\nSecond line.\\nThird line."
+print(msg)`,
+
+  triple_strings: `# Triple-quoted strings — preserve newlines
 let poem = """Roses are red,
 Violets are blue,
 Piper is fast,
 And easy too."""
 print(poem)
 
-# F-strings
-for i in 1..5:
-    print(f"Count: {i}")`,
+let sql = """SELECT *
+FROM users
+WHERE active = 1
+ORDER BY name"""
+print(sql)
 
-    fib: `# Fibonacci sequence
-fn fib(n):
-    if n <= 1: return n
-    return fib(n - 1) + fib(n - 2)
+# Works with f-strings too
+let name = "Piper"
+let block = f"""Welcome to {name}!
+Version: 0.9.0
+Have fun."""
+print(block)`,
 
-for i in 0..10:
-    print(f"fib({i}) = {fib(i)}")`,
+  comments: `# Single-line comment
 
-    list: `# List operations
-let nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+# This is how you write
+# multi-line comments in Piper
 
-print("Original: " + str(nums))
-print("Sorted:   " + str(sort(nums)))
-print("Sum:      " + str(sum(nums)))
-print("Mean:     " + str(round(mean(nums), 2)))
-print("Min/Max:  " + str(min(nums)) + " / " + str(max(nums)))
+let x = 42  # inline comment too
 
-let squares = [x * x for x in 1..8]
-print("Squares:  " + str(squares))
+# Comments are stripped before parsing
+# so they have zero performance cost
 
-let evens = [x for x in nums if x % 2 == 0]
-print("Evens:    " + str(evens))
+print("Comments don't affect output")
+print("x =", str(x))`,
 
-# Slicing with step
-let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-print("Every other: " + str(data[::2]))
-print("Reversed:    " + str(data[::-1]))
-print("1..8 step 2: " + str(data[1:8:2]))
+  // ── Control Flow ────────────────────────────────────────────────────────
 
-# Sort with key function
-let words = ["banana", "apple", "cherry", "fig"]
-print("Sort by length: " + str(sort(words, fn(w) => len(w))))`,
+  if_elif_else: `# If / Elif / Else
+let score = 87
 
-    pipe: `# Pipe operator |>
-fn double(x): return x * 2
-fn add_one(x): return x + 1
+if score >= 90:
+    print("Grade: A")
+elif score >= 80:
+    print("Grade: B")
+elif score >= 70:
+    print("Grade: C")
+else:
+    print("Grade: F")
 
-# Chain transformations elegantly
-[1, 2, 3, 4, 5] |> sum |> str |> print
+# One-liner condition
+let x = 15
+if x % 2 == 0: print("even")
+else: print("odd")
 
-let result = [1, 2, 3, 4, 5] |> sum
-print("Sum via pipe: " + str(result))
+# Logical operators
+let age = 25
+let member = true
+if age >= 18 and member:
+    print("Full access granted")
 
-# Sort and reverse with pipe
-let data = [5, 2, 8, 1, 9, 3]
-let sorted = data |> sort |> reverse
-print("Sorted desc: " + str(sorted))
+# not operator
+if not (age < 18):
+    print("Adult confirmed")`,
 
-# Pipe into map/filter
-let processed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    |> sum
-print("Total: " + str(processed))`,
+  while_loop: `# While loop
+let i = 0
+while i < 5:
+    print(f"i = {i}")
+    i += 1
 
-    lambda: `# Lambda / anonymous functions
+# While with break
+let n = 0
+while true:
+    n += 1
+    if n == 4:
+        print("Breaking at n =", str(n))
+        break
+
+# Countdown
+let count = 5
+while count > 0:
+    print(f"T-{count}...")
+    count -= 1
+print("Liftoff!")`,
+
+  for_loop: `# For loop over list
+let fruits = ["apple", "banana", "cherry"]
+for fruit in fruits:
+    print("Fruit:", fruit)
+
+# For with index (enumerate)
+for i in range(len(fruits)):
+    print(f"  [{i}] {fruits[i]}")
+
+# Nested for loops
+for i in 1..4:
+    for j in 1..4:
+        if i == j:
+            print(f"  {i} × {j} = {i*j}")
+
+# For over dict keys
+let scores = {"Alice": 95, "Bob": 87}
+for name in keys(scores):
+    print(f"{name}: {scores[name]}")`,
+
+  ranges: `# Ranges — 1..5 gives [1, 2, 3, 4]
+for i in 1..6:
+    print(i)
+
+# range(stop)
+for i in range(5):
+    print("range:", i)
+
+# range(start, stop)
+for i in range(2, 7):
+    print("2..7:", i)
+
+# range(start, stop, step)
+for i in range(0, 20, 5):
+    print("step 5:", i)
+
+# Collect into a list
+let evens = [x for x in range(0, 10, 2)]
+print("Evens:", str(evens))`,
+
+  break_continue: `# Break — exit loop early
+for i in range(10):
+    if i == 5:
+        break
+    print("i:", i)
+print("Stopped at 5")
+
+# Continue — skip iteration
+for i in range(10):
+    if i % 2 == 0:
+        continue      # skip even
+    print("odd:", i)
+
+# While + break
+let x = 100
+while x > 0:
+    x -= 17
+    if x < 20:
+        print("Stopped at x =", str(x))
+        break`,
+
+  // ── Functions ────────────────────────────────────────────────────────────
+
+  basic_functions: `# Defining and calling functions
+fn greet(name):
+    return "Hello, " + name + "!"
+
+print(greet("Alice"))
+print(greet("World"))
+
+# Multiple return values (via list)
+fn min_max(nums):
+    return [min(nums), max(nums)]
+
+let result = min_max([3, 1, 7, 2, 9])
+print("min:", str(result[0]), "max:", str(result[1]))
+
+# Default parameters
+fn power(base, exp=2):
+    return pow(base, exp)
+
+print(power(3))     # 9
+print(power(2, 10)) # 1024
+
+# Recursion
+fn factorial(n):
+    if n <= 1: return 1
+    return n * factorial(n - 1)
+
+for n in [1, 2, 3, 4, 5, 6, 7]:
+    print(f"  {n}! = {factorial(n)}")`,
+
+  lambdas: `# Lambda / anonymous functions
 let double = fn(x) => x * 2
 let square = fn(x) => x * x
 let add    = fn(a, b) => a + b
 
 print("double(5) =", str(double(5)))
 print("square(4) =", str(square(4)))
-print("add(3, 7) =", str(add(3, 7)))
+print("add(3,7)  =", str(add(3, 7)))
 
-# Use lambdas with map, filter, reduce
-let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# Pass lambda to map/filter
+let nums = [1, 2, 3, 4, 5, 6, 7, 8]
 let evens   = filter(nums, fn(x) => x % 2 == 0)
 let squares = map(evens, fn(x) => x * x)
-let total   = reduce(squares, fn(a, b) => a + b)
 print("Even squares:", str(squares))
-print("Their sum:   ", str(total))
 
-# Higher-order functions
-fn apply(f, x): return f(x)
-fn compose(f, g): return fn(x) => f(g(x))
+# Sort with key lambda
+let words = ["banana", "apple", "fig", "cherry"]
+print("By length:", str(sort(words, fn(w) => len(w))))`,
 
-let double_then_square = compose(square, double)
-print("compose(square, double)(3) =", str(double_then_square(3)))`,
+  varargs: `# *args — variadic (collects into list)
+fn sum_all(*nums):
+    let total = 0
+    for n in nums:
+        total += n
+    return total
 
-    inheritance: `# Inheritance & OOP (v0.9.0)
+print(sum_all(1, 2, 3))           # 6
+print(sum_all(10, 20, 30, 40))    # 100
 
+fn join_words(*words):
+    return join(", ", words)
+
+print(join_words("alpha", "beta", "gamma"))
+
+fn describe(label, *items):
+    print(label + ": " + str(items))
+
+describe("colors", "red", "green", "blue")`,
+
+  named_args: `# Named / keyword arguments
+fn greet(name, greeting="Hello", punct="!"):
+    print(greeting + ", " + name + punct)
+
+greet("Alice")
+greet("Bob", greeting="Hi")
+greet("Carol", punct="~", greeting="Hey")
+greet(punct=".", greeting="Good day", name="Dave")
+
+# Mix positional + named
+fn describe(item, color="red", size="medium"):
+    print(f"A {size} {color} {item}")
+
+describe("apple")
+describe("car", color="blue", size="large")
+describe("hat", size="small")
+
+# Default can be any expression
+fn repeat(text, times=3, sep=" | "):
+    let out = ""
+    for i in range(times):
+        if i > 0: out += sep
+        out += text
+    return out
+
+print(repeat("ping"))
+print(repeat("go", times=4, sep=" "))`,
+
+  closures: `# Closures — inner fn captures outer scope
+fn make_adder(n):
+    return fn(x) => x + n
+
+fn make_multiplier(n):
+    return fn(x) => x * n
+
+let add5  = make_adder(5)
+let add10 = make_adder(10)
+let triple = make_multiplier(3)
+
+print("add5(7)   =", str(add5(7)))
+print("add10(7)  =", str(add10(7)))
+print("triple(6) =", str(triple(6)))
+
+# Compose two closures
+fn compose(f, g):
+    return fn(x) => f(g(x))
+
+let add5_then_triple = compose(triple, add5)
+print("triple(add5(4)) =", str(add5_then_triple(4)))`,
+
+  higher_order: `# Higher-order functions
+fn apply(f, x):
+    return f(x)
+
+fn twice(f):
+    return fn(x) => f(f(x))
+
+let double = fn(x) => x * 2
+let inc    = fn(x) => x + 1
+
+print("apply(double, 5) =", str(apply(double, 5)))
+print("twice(inc)(7)    =", str(twice(inc)(7)))
+print("twice(double)(3) =", str(twice(double)(3)))
+
+# Partial application
+fn partial(f, a):
+    return fn(b) => f(a, b)
+
+fn add(a, b): return a + b
+let add10 = partial(add, 10)
+print("add10(25) =", str(add10(25)))
+
+# Pipeline with map, filter, reduce
+let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+let result = reduce(
+    map(filter(nums, fn(x) => x % 2 == 0), fn(x) => x * x),
+    fn(a, b) => a + b
+)
+print("sum of even squares:", str(result))`,
+
+  // ── Collections ─────────────────────────────────────────────────────────
+
+  lists: `# Lists — ordered, mutable
+let nums = [1, 2, 3, 4, 5]
+
+print("list:  ", str(nums))
+print("len:   ", str(len(nums)))
+print("first: ", str(nums[0]))
+print("last:  ", str(nums[-1]))
+
+# Mutate
+append(nums, 6)
+print("after append:", str(nums))
+
+let removed = pop(nums, 0)   # remove first
+print("popped:", str(removed), "| left:", str(nums))
+
+insert(nums, 0, 99)
+print("after insert at 0:", str(nums))
+
+# Iterate
+for n in nums:
+    print(" item:", n)`,
+
+  list_comp: `# List comprehensions
+let squares = [x * x for x in 1..9]
+print("squares:", str(squares))
+
+# With filter condition
+let evens = [x for x in range(20) if x % 2 == 0]
+print("evens:", str(evens))
+
+# Transform strings
+let words = ["hello", "world", "piper"]
+let upper_words = [upper(w) for w in words]
+print("upper:", str(upper_words))
+
+# Nested comprehension
+let pairs = [[i, j] for i in 1..4 for j in 1..4 if i != j]
+for p in pairs:
+    print(f"  {p[0]},{p[1]}")`,
+
+  slicing: `# Slicing — list[start:stop:step]
+let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+print("full:        ", str(data))
+print("first 3:     ", str(data[:3]))
+print("last 3:      ", str(data[-3:]))
+print("2..7:        ", str(data[2:7]))
+print("every other: ", str(data[::2]))
+print("reversed:    ", str(data[::-1]))
+print("1..8 step 2: ", str(data[1:8:2]))
+print("last 4 rev:  ", str(data[-4::-1]))
+
+# Strings are sliceable too
+let s = "Hello, Piper!"
+print(s[:5])    # Hello
+print(s[7:])    # Piper!
+print(s[::-1])  # reversed`,
+
+  dicts: `# Dicts — key/value pairs
+let person = {"name": "Alice", "age": 30, "active": true}
+
+print("name:", person["name"])
+print("age: ", str(person["age"]))
+
+# Add / update
+person["email"] = "alice@example.com"
+person["age"] = 31
+print("updated:", str(person))
+
+# Safe access with get()
+print(get(person, "phone", "N/A"))
+
+# Check membership
+print("has 'email'?", str(has_key(person, "email")))
+print("has 'fax'?  ", str(has_key(person, "fax")))
+
+# Delete key
+del_key(person, "active")
+print("after del:", str(person))
+
+# Iterate
+for k in keys(person):
+    print(f"  {k}: {person[k]}")`,
+
+  dict_comp: `# Dict comprehensions
+let squares = {x: x*x for x in range(1, 6)}
+print("squares:", str(squares))
+
+# With condition
+let even_sq = {x: x*x for x in range(1, 11) if x % 2 == 0}
+print("even squares:", str(even_sq))
+
+# From list of words
+let words = ["apple", "banana", "cherry", "fig"]
+let lengths = {w: len(w) for w in words}
+print("lengths:", str(lengths))
+
+# Invert a mapping
+let scores = {"Alice": 95, "Bob": 87, "Carol": 92}
+let inverted = {scores[k]: k for k in keys(scores)}
+print("inverted:", str(inverted))`,
+
+  // ── Operators ────────────────────────────────────────────────────────────
+
+  pipe_op: `# Pipe operator |> chains function calls
+fn double(x): return x * 2
+fn inc(x):    return x + 1
+fn fmt(x):    return f"Result: {x}"
+
+# Without pipe
+print(fmt(inc(double(5))))
+
+# With pipe — left to right, readable
+5 |> double |> inc |> fmt |> print
+
+# Pipe with collections
+let result = [1, 2, 3, 4, 5] |> sum
+print("sum:", str(result))
+
+[1, 2, 3, 4, 5] |> sum |> str |> print
+
+# Pipe into sort and reverse
+[5, 2, 8, 1, 9, 3] |> sort |> reverse |> str |> print`,
+
+  null_coalesce: `# Null coalescing ??
+# Returns right-hand side when left is none
+
+let a = none
+let b = 42
+
+print(a ?? "default")          # default
+print(b ?? "default")          # 42
+print(none ?? none ?? "last")  # last
+
+# Useful for optional config
+fn get_config(key):
+    if key == "port": return 8080
+    return none
+
+let port    = get_config("port")    ?? 3000
+let timeout = get_config("timeout") ?? 30
+let debug   = get_config("debug")   ?? false
+
+print("port:   ", str(port))
+print("timeout:", str(timeout))
+print("debug:  ", str(debug))`,
+
+  optional_chain: `# Optional chaining ?.
+# Returns none instead of crashing when object is none
+
+class User:
+    fn init(self, name, email):
+        self.name = name
+        self.email = email
+
+let alice = User("Alice", "alice@x.com")
+let ghost = none
+
+print(alice?.name)   # Alice
+print(ghost?.name)   # none
+
+# Chain ?? with ?. for safe defaults
+let display = ghost?.name ?? "Anonymous"
+print("Display:", display)
+
+# Nested optional access
+class Profile:
+    fn init(self, user):
+        self.user = user
+
+let profile = Profile(alice)
+let empty   = none
+
+print(profile?.user?.name ?? "Unknown")
+print(empty?.user?.name   ?? "Unknown")`,
+
+  arithmetic: `# Arithmetic operators
+print(10 + 3)   # 13
+print(10 - 3)   # 7
+print(10 * 3)   # 30
+print(10 / 3)   # 3.333...
+print(10 // 3)  # 3  (floor division)
+print(10 % 3)   # 1  (modulo)
+print(2 ** 8)   # 256 (power)
+
+# Comparison
+print(5 > 3)    # true
+print(5 == 5)   # true
+print(5 != 4)   # true
+print(3 >= 3)   # true
+
+# Logical
+print(true and false)   # false
+print(true or  false)   # true
+print(not true)         # false
+
+# String concatenation
+print("Hello" + ", " + "World!")
+
+# Operator precedence (PEMDAS)
+print(2 + 3 * 4)        # 14
+print((2 + 3) * 4)      # 20`,
+
+  augmented_assign: `# Augmented assignment operators
+let x = 10
+x += 5;  print("+=", x)   # 15
+x -= 3;  print("-=", x)   # 12
+x *= 2;  print("*=", x)   # 24
+x //= 5; print("//=", x)  # 4
+x **= 3; print("**=", x)  # 64
+x %= 10; print("%=", x)   # 4
+
+# On list (appends)
+let nums = [1, 2, 3]
+# note: use append() for list mutation
+append(nums, 4)
+print("list:", str(nums))`,
+
+  // ── Classes & OOP ────────────────────────────────────────────────────────
+
+  classes: `# Classes
+class Point:
+    fn init(self, x, y):
+        self.x = x
+        self.y = y
+
+    fn distance(self, other):
+        let dx = self.x - other.x
+        let dy = self.y - other.y
+        return sqrt(dx*dx + dy*dy)
+
+    fn __str__(self):
+        return f"Point({self.x}, {self.y})"
+
+let a = Point(0, 0)
+let b = Point(3, 4)
+
+print(str(a))
+print(str(b))
+print("distance:", str(a.distance(b)))
+
+# Instance fields can be added dynamically
+a.label = "origin"
+print("label:", a.label)`,
+
+  inheritance: `# Inheritance
 class Animal:
     fn init(self, name, sound):
         self.name = name
@@ -345,181 +1065,494 @@ class Dog(Animal):
         append(self.tricks, trick)
         print(self.name + " learned: " + trick)
 
-    fn show_tricks(self):
-        print(self.name + "'s tricks: " + str(self.tricks))
-
     fn __str__(self):
         return "Dog(" + self.name + ")"
 
 class Cat(Animal):
     fn init(self, name):
         super.init(self, name, "Meow")
-        self.indoor = true
 
-    fn __str__(self):
-        return "Cat(" + self.name + ")"
-
-# Create instances
 let rex = Dog("Rex")
 let whiskers = Cat("Whiskers")
 
 rex.speak()
 whiskers.speak()
-
 rex.learn("sit")
-rex.learn("shake")
-rex.show_tricks()
+rex.learn("roll over")
 
-# __str__ is used by print() and str()
 print(str(rex))
-print(str(whiskers))
+print(str(whiskers))`,
 
-# Static method example
+  static_methods: `# Static methods — called on class, not instance
 class MathUtils:
-    static fn add(a, b): return a + b
-    static fn square(x): return x * x
+    static fn add(a, b):      return a + b
+    static fn square(x):      return x * x
+    static fn factorial(n):
+        if n <= 1: return 1
+        return n * MathUtils.factorial(n - 1)
 
-print("static add(3, 4) =", str(MathUtils.add(3, 4)))
-print("static square(5) =", str(MathUtils.square(5)))`,
+print("add(3, 4)    =", str(MathUtils.add(3, 4)))
+print("square(5)    =", str(MathUtils.square(5)))
+print("factorial(6) =", str(MathUtils.factorial(6)))
 
-    closures: `# Closures — lambdas capture outer scope (v0.9.0)
+class Converter:
+    static fn to_celsius(f):    return (f - 32) * 5 / 9
+    static fn to_fahrenheit(c): return c * 9 / 5 + 32
 
-fn make_adder(n):
-    return fn(x) => x + n
+print("98.6°F →", str(round(Converter.to_celsius(98.6), 1)), "°C")
+print("100°C  →", str(Converter.to_fahrenheit(100)), "°F")`,
 
-fn make_multiplier(n):
-    return fn(x) => x * n
+  dunder_str: `# __str__ — custom string representation
+class Color:
+    fn init(self, r, g, b):
+        self.r = r
+        self.g = g
+        self.b = b
 
-fn make_counter():
-    let count = 0
-    return fn(step) => step
+    fn __str__(self):
+        return f"rgb({self.r}, {self.g}, {self.b})"
 
-let add5  = make_adder(5)
-let add10 = make_adder(10)
-let triple = make_multiplier(3)
+class Vector:
+    fn init(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
 
-print("add5(7)   =", str(add5(7)))
-print("add10(7)  =", str(add10(7)))
-print("triple(6) =", str(triple(6)))
+    fn __str__(self):
+        return f"<{self.x}, {self.y}, {self.z}>"
 
-# Compose two closures
-fn compose(f, g):
-    return fn(x) => f(g(x))
+    fn magnitude(self):
+        return sqrt(self.x**2 + self.y**2 + self.z**2)
 
-let add5_then_triple = compose(triple, add5)
-print("triple(add5(4)) =", str(add5_then_triple(4)))
+let red = Color(255, 0, 0)
+let v   = Vector(1, 2, 3)
 
-# *args — variadic functions
-fn sum_all(*nums):
-    let total = 0
-    for n in nums:
-        total += n
-    return total
+print(str(red))               # rgb(255, 0, 0)
+print(str(v))                 # <1, 2, 3>
+print("mag:", str(round(v.magnitude(), 4)))
 
-print("sum_all(1,2,3,4,5) =", str(sum_all(1, 2, 3, 4, 5)))
-print("sum_all(10,20)     =", str(sum_all(10, 20)))`,
+# print() automatically uses __str__
+print("Color:", str(red))
+print("Vec:  ", str(v))`,
 
-    nullsafe: `# Null coalescing ?? and optional chaining ?. (v0.9.0)
+  // ── Math Built-ins ───────────────────────────────────────────────────────
 
-# ?? returns right side when left is none
-let a = none
-let b = 42
+  math_basic: `# abs, round, floor, ceil, int, float
+print("abs(-7):      ", str(abs(-7)))
+print("abs(3.14):    ", str(abs(3.14)))
+print("round(3.567): ", str(round(3.567)))
+print("round(3.567,2):", str(round(3.567, 2)))
+print("floor(4.9):   ", str(floor(4.9)))
+print("ceil(4.1):    ", str(ceil(4.1)))
+print("int(3.99):    ", str(int(3.99)))
+print("float('2.5'): ", str(float("2.5")))
 
-print(a ?? "default")    # default
-print(b ?? "default")    # 42
-print(none ?? none ?? "fallback")  # fallback
+# Sign
+let x = -15
+print("abs(x):", str(abs(x)))`,
 
-# Chained coalescing
-fn get_config(key):
-    if key == "port": return 8080
-    return none
+  math_power: `# pow, sqrt, log, exp
+print("pow(2, 10): ", str(pow(2, 10)))
+print("sqrt(144):  ", str(sqrt(144)))
+print("sqrt(2):    ", str(round(sqrt(2), 6)))
 
-let port    = get_config("port") ?? 3000
-let timeout = get_config("timeout") ?? 30
+# exp(x) = e^x
+print("exp(1):     ", str(round(exp(1), 6)))
+print("exp(2):     ", str(round(exp(2), 4)))
 
-print("port:    " + str(port))
-print("timeout: " + str(timeout))
+# log (natural log)
+print("log(1):     ", str(log(1)))
+print("log(e):     ", str(round(log(exp(1)), 6)))
+print("log(100):   ", str(round(log(100), 4)))`,
 
-# ?. returns none instead of crashing on nil
-class User:
-    fn init(self, name, email):
-        self.name = name
-        self.email = email
+  math_trig: `# sin, cos, tan, pi, e
+let PI = pi()
+let E  = e()
 
-let user = User("Alice", "alice@example.com")
-let ghost = none
+print("pi =", str(round(PI, 10)))
+print("e  =", str(round(E, 10)))
 
-print(user?.name)    # Alice
-print(ghost?.name)   # none
+print("sin(0):      ", str(sin(0)))
+print("sin(pi/2):   ", str(round(sin(PI / 2), 6)))
+print("cos(0):      ", str(cos(0)))
+print("cos(pi):     ", str(round(cos(PI), 6)))
+print("tan(pi/4):   ", str(round(tan(PI / 4), 6)))
 
-# Combine ?? and ?.
-let display = ghost?.name ?? "Anonymous"
-print("Display name: " + display)`,
+# Degrees to radians
+fn deg_to_rad(d): return d * PI / 180
+print("sin(90°):    ", str(round(sin(deg_to_rad(90)), 6)))
+print("cos(60°):    ", str(round(cos(deg_to_rad(60)), 6)))`,
 
-    dictcomp: `# Dict comprehensions (v0.9.0)
+  math_minmax: `# min, max, clamp, sum, abs
+let nums = [3, 1, 7, 2, 9, 4, 6]
 
-# Basic dict comprehension
-let squares = {x: x*x for x in range(1, 6)}
-print("Squares:", str(squares))
+print("min:  ", str(min(nums)))
+print("max:  ", str(max(nums)))
+print("sum:  ", str(sum(nums)))
 
-# With condition
-let even_squares = {x: x*x for x in range(1, 11) if x % 2 == 0}
-print("Even squares:", str(even_squares))
+# min/max of two values
+print("min(4,9):", str(min(4, 9)))
+print("max(4,9):", str(max(4, 9)))
 
-# String keys
-let words = ["apple", "banana", "cherry"]
-let lengths = {w: len(w) for w in words}
-print("Word lengths:", str(lengths))
+# clamp — keep value in [lo, hi]
+fn clamp(v, lo, hi):
+    if v < lo: return lo
+    if v > hi: return hi
+    return v
 
-# Invert a mapping
-let scores = {"Alice": 95, "Bob": 87, "Carol": 92}
-print("Keys:  ", str(keys(scores)))
-print("Values:", str(values(scores)))
+print("clamp(5, 0, 10): ", str(clamp(5, 0, 10)))
+print("clamp(-3, 0, 10):", str(clamp(-3, 0, 10)))
+print("clamp(15, 0, 10):", str(clamp(15, 0, 10)))`,
 
-# Access and update
-scores["Dave"] = 88
-print("After adding Dave:", str(keys(scores)))
-print("Alice's score:", str(scores["Alice"]))
+  // ── String Built-ins ─────────────────────────────────────────────────────
 
-# has_key, get, del_key
-print("Has Eve?", str(has_key(scores, "Eve")))
-print("Bob's score:", str(get(scores, "Bob", 0)))`,
+  str_case: `# upper, lower, title
+let s = "hello, piper!"
 
-    varargs: `# *args variadic params & named arguments (v0.9.0)
+print(upper(s))    # HELLO, PIPER!
+print(lower(s))    # hello, piper!
+print(title(s))    # Hello, Piper!
 
-# *args collects all positional args into a list
-fn sum_all(*nums):
-    let total = 0
-    for n in nums:
-        total += n
-    return total
+# Comparisons (case-insensitive trick)
+let a = "Piper"
+let b = "piper"
+print("equal?", str(lower(a) == lower(b)))
 
-print("sum_all(1,2,3)       =", str(sum_all(1, 2, 3)))
-print("sum_all(10,20,30,40) =", str(sum_all(10, 20, 30, 40)))
+# Check casing
+let word = "SHOUTING"
+print("all upper?", str(upper(word) == word))`,
 
-fn join_words(*words):
-    return join(", ", words)
+  str_search: `# contains, starts_with, ends_with, index_of
+let s = "Hello, Piper World!"
 
-print(join_words("alpha", "beta", "gamma"))
+print(contains(s, "Piper"))        # true
+print(contains(s, "Python"))       # false
+print(starts_with(s, "Hello"))     # true
+print(ends_with(s, "World!"))      # true
 
-# Named arguments — pass in any order
-fn greet(name, greeting="Hello", punct="!"):
-    print(greeting + ", " + name + punct)
+# Find position
+let pos = index_of(s, "Piper")
+print("Piper at index:", str(pos))
 
-greet("Alice")
-greet("Bob", greeting="Hi")
-greet(name="Carol", greeting="Hey", punct="~")
-greet(punct=".", greeting="Good day", name="Dave")
+# Count occurrences
+let text = "banana"
+print("count 'a':", str(count(text, "a")))`,
 
-# Mix positional and named
-fn describe(item, color="red", size="medium"):
-    print(f"A {size} {color} {item}")
+  str_modify: `# split, join, trim, replace
+let csv = "apple,banana,cherry,fig"
 
-describe("apple")
-describe("car", color="blue", size="large")
-describe("hat", size="small")`,
+# Split into list
+let fruits = split(csv, ",")
+print("split:", str(fruits))
 
-    ai: `# AI / ML built-ins
+# Join back
+let rejoined = join(" | ", fruits)
+print("joined:", rejoined)
+
+# trim — strip whitespace
+let padded = "   hello world   "
+print("trimmed: '" + trim(padded) + "'")
+
+# replace
+let s = "Hello World World"
+print(replace(s, "World", "Piper"))
+print(replace(s, "World", "Piper"))   # all occurrences`,
+
+  str_format: `# len, repeat, str
+let s = "Piper"
+
+print("len:", str(len(s)))
+
+# repeat (manual)
+fn repeat_str(s, n):
+    let out = ""
+    for i in range(n):
+        out += s
+    return out
+
+print(repeat_str("abc", 3))
+print(repeat_str("-", 20))
+
+# Convert to/from string
+let n = 12345
+let ns = str(n)
+print("str:", ns, "len:", str(len(ns)))
+
+# Check if numeric
+fn is_numeric(s):
+    for c in s:
+        if not contains("0123456789.", c): return false
+    return true
+
+print("'42' numeric?  ", str(is_numeric("42")))
+print("'hi' numeric?  ", str(is_numeric("hi")))`,
+
+  // ── List Built-ins ───────────────────────────────────────────────────────
+
+  list_ops: `# append, pop, insert, len
+let items = ["a", "b", "c"]
+
+append(items, "d")
+print("after append:", str(items))
+
+let removed = pop(items, 1)  # remove index 1
+print("popped:", removed, "| list:", str(items))
+
+insert(items, 0, "Z")       # insert at front
+print("after insert:", str(items))
+
+print("length:", str(len(items)))
+
+# Flatten (manual)
+let nested = [[1, 2], [3, 4], [5, 6]]
+let flat = []
+for sub in nested:
+    for x in sub:
+        append(flat, x)
+print("flattened:", str(flat))`,
+
+  list_sort: `# sort, reverse, unique
+let nums = [5, 2, 8, 1, 9, 3, 2, 5]
+
+print("original:", str(nums))
+print("sorted:  ", str(sort(nums)))
+print("reversed:", str(reverse(nums)))
+print("unique:  ", str(unique(nums)))
+
+# Sort with custom key
+let words = ["banana", "apple", "fig", "cherry"]
+print("by len:     ", str(sort(words, fn(w) => len(w))))
+print("by len desc:", str(reverse(sort(words, fn(w) => len(w)))))
+
+# Reverse in place
+let data = [1, 2, 3, 4, 5]
+print("rev:", str(reverse(data)))`,
+
+  list_search: `# contains, index_of, count
+let nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+
+print("contains 9?", str(contains(nums, 9)))
+print("contains 7?", str(contains(nums, 7)))
+
+print("index of 5:", str(index_of(nums, 5)))
+print("count of 1:", str(count(nums, 1)))
+print("count of 5:", str(count(nums, 5)))
+
+# Filter instead of search
+let fives = [x for x in nums if x == 5]
+print("all 5s:", str(fives))
+
+# Any / All (manual)
+fn any_match(lst, pred):
+    for x in lst:
+        if pred(x): return true
+    return false
+
+fn all_match(lst, pred):
+    for x in lst:
+        if not pred(x): return false
+    return true
+
+print("any > 8?", str(any_match(nums, fn(x) => x > 8)))
+print("all > 0?", str(all_match(nums, fn(x) => x > 0)))`,
+
+  list_hof: `# map, filter, reduce
+let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# map — transform each element
+let squares = map(nums, fn(x) => x * x)
+print("squares:", str(squares))
+
+# filter — keep matching elements
+let evens = filter(nums, fn(x) => x % 2 == 0)
+print("evens:  ", str(evens))
+
+# reduce — fold to single value
+let total = reduce(nums, fn(a, b) => a + b)
+print("sum:    ", str(total))
+
+let product = reduce([1, 2, 3, 4, 5], fn(a, b) => a * b)
+print("product:", str(product))
+
+# Chain them
+let result = reduce(
+    map(filter(nums, fn(x) => x % 2 == 0), fn(x) => x * x),
+    fn(a, b) => a + b
+)
+print("sum of even squares:", str(result))`,
+
+  // ── Dict Built-ins ───────────────────────────────────────────────────────
+
+  dict_ops: `# keys, values, has_key
+let d = {"name": "Alice", "age": 30, "city": "NYC"}
+
+print("keys:  ", str(keys(d)))
+print("values:", str(values(d)))
+print("len:   ", str(len(keys(d))))
+
+# has_key
+print("has 'name'?", str(has_key(d, "name")))
+print("has 'email'?", str(has_key(d, "email")))
+
+# Iterate over keys and values
+for k in keys(d):
+    print(f"  {k} = {d[k]}")`,
+
+  dict_get_del: `# get (with default), del_key, merge
+let d = {"host": "localhost", "port": 8080}
+
+# get with default (safe access)
+print(get(d, "host",    "unknown"))   # localhost
+print(get(d, "timeout", 30))          # 30 (default)
+
+# Delete key
+del_key(d, "port")
+print("after del:", str(d))
+
+# Merge two dicts (manual)
+let defaults = {"timeout": 30, "debug": false, "host": "0.0.0.0"}
+let config   = {"host": "localhost", "port": 8080}
+
+for k in keys(config):
+    defaults[k] = config[k]
+
+print("merged:", str(defaults))`,
+
+  // ── AI / ML ──────────────────────────────────────────────────────────────
+
+  activations: `# Activation functions
+let z = [-3.0, -1.0, 0.0, 1.0, 3.0]
+
+# ReLU — max(0, x)
+print("relu:   ", str(relu(z)))
+
+# Sigmoid — 1/(1+e^-x)
+let sig = map(z, fn(x) => round(sigmoid(x), 4))
+print("sigmoid:", str(sig))
+
+# Softmax — normalised exponentials
+let logits = [2.0, 1.0, 0.1, 3.5]
+let probs  = map(softmax(logits), fn(x) => round(x, 4))
+print("softmax:", str(probs))
+
+# Verify softmax sums to 1
+let total = reduce(softmax(logits), fn(a, b) => a + b)
+print("sum:    ", str(round(total, 6)))`,
+
+  matrix_ops: `# Matrix operations
+let A = [[1, 2, 3], [4, 5, 6]]
+let B = [[7, 8], [9, 10], [11, 12]]
+
+# Matrix multiply — (2×3) @ (3×2) = (2×2)
+let C = matmul(A, B)
+print("A @ B:", str(C))
+
+# Transpose
+let AT = transpose(A)
+print("A^T:", str(AT))
+
+# Dot product (1D)
+let u = [1.0, 2.0, 3.0]
+let v = [4.0, 5.0, 6.0]
+let d = dot(u, v)
+print("dot:", str(d))    # 32
+
+# Scale a matrix (manual)
+let M = [[1, 0], [0, 1]]
+let scaled = [[M[i][j] * 2 for j in range(2)] for i in range(2)]
+print("2×I:", str(scaled))`,
+
+  stats: `# Statistics
+let data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+
+print("data:   ", str(data))
+print("mean:   ", str(mean(data)))
+print("median: ", str(median(data)))
+print("std:    ", str(round(std(data), 4)))
+print("min:    ", str(min(data)))
+print("max:    ", str(max(data)))
+print("sum:    ", str(sum(data)))
+
+# Normalise to [0,1]
+let lo = min(data)
+let hi = max(data)
+let normed = map(data, fn(x) => round((x - lo) / (hi - lo), 3))
+print("normed:", str(normed))`,
+
+  random: `# Random numbers
+seed(42)   # reproducible
+
+print("rand():     ", str(round(rand(), 4)))
+print("rand():     ", str(round(rand(), 4)))
+print("randint(1,6):", str(randint(1, 6)))
+print("randint(1,6):", str(randint(1, 6)))
+
+# Random normal vector
+let v = randn(5)
+print("randn(5):   ", str(map(v, fn(x) => round(x, 3))))
+
+# Shuffle a list (manual using rand)
+fn shuffle(lst):
+    let n = len(lst)
+    for i in range(n - 1, 0, -1):
+        let j = randint(0, i)
+        let tmp = lst[i]
+        lst[i] = lst[j]
+        lst[j] = tmp
+    return lst
+
+let deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+seed(99)
+print("shuffled:", str(shuffle(deck)))`,
+
+  // ── Full Examples ─────────────────────────────────────────────────────────
+
+  ex_fibonacci: `# Fibonacci — recursive and iterative
+fn fib_rec(n):
+    if n <= 1: return n
+    return fib_rec(n - 1) + fib_rec(n - 2)
+
+fn fib_iter(n):
+    if n <= 1: return n
+    let a = 0
+    let b = 1
+    for i in range(n - 1):
+        let tmp = a + b
+        a = b
+        b = tmp
+    return b
+
+print("Recursive vs Iterative:")
+for i in range(12):
+    print(f"  fib({i}) = {fib_rec(i)}  /  {fib_iter(i)}")`,
+
+  ex_list_ops: `# List operations — comprehensive
+let nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+
+print("Original: " + str(nums))
+print("Sorted:   " + str(sort(nums)))
+print("Unique:   " + str(unique(nums)))
+print("Sum:      " + str(sum(nums)))
+print("Mean:     " + str(round(mean(nums), 2)))
+print("Median:   " + str(median(nums)))
+print("Std:      " + str(round(std(nums), 4)))
+
+let squares = [x * x for x in 1..8]
+print("Squares:  " + str(squares))
+
+let evens = [x for x in nums if x % 2 == 0]
+print("Evens:    " + str(evens))
+
+# Slicing
+let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+print("Every other:", str(data[::2]))
+print("Reversed:   ", str(data[::-1]))
+
+# Sort with key
+let words = ["banana", "apple", "cherry", "fig"]
+print("Sort by len:", str(sort(words, fn(w) => len(w))))`,
+
+  ex_ai: `# AI / ML built-ins
 let z = [-2.0, -1.0, 0.0, 1.0, 2.0]
 
 print("relu:    ", str(relu(z)))
@@ -539,14 +1572,14 @@ print("mean:    ", str(mean(data)))
 print("std:     ", str(round(std(data), 4)))
 print("median:  ", str(median(data)))
 
-# Random (seeded for reproducibility)
+# Random (seeded)
 seed(42)
 print("rand:    ", str(round(rand(), 4)))
 print("randint: ", str(randint(1, 100)))
 let v = randn(5)
 print("randn:   ", str(map(v, fn(x) => round(x, 3))))`,
 
-    messaging: `# PiperChat — Messaging App Demo
+  ex_messaging: `# PiperChat — Messaging App Demo
 class Message:
     fn init(self, id, sender, recipient, content):
         self.id = id
@@ -587,71 +1620,113 @@ app.register("Bob")
 app.register("Carol")
 print("")
 app.send("Alice", "Bob", "Hey Bob!")
-app.send("Bob", "Alice", "Hi Alice, how are you?")
-app.send("Carol", "Alice", "Are you free tomorrow?")
-app.send("Alice", "Carol", "Yes, let's meet at noon!")
+app.send("Bob", "Alice", "Hi Alice!")
+app.send("Carol", "Alice", "Free tomorrow?")
+app.send("Alice", "Carol", "Yes! Noon works.")
 print("")
 app.show_chat("Alice", "Bob")
 print("")
 app.show_chat("Alice", "Carol")`
-  };
+};
 
-  window.loadExample = function(name) {
-    document.getElementById('editor').value = EXAMPLES[name] || '';
-  };
+// ── Sidebar logic ───────────────────────────────────────────────────────────
+function toggleSection(header) {
+  header.classList.toggle('open');
+  const items = header.nextElementSibling;
+  items.classList.toggle('open');
+}
 
-  window.runCode = async function() {
-    const btn = document.getElementById('runBtn');
-    const out = document.getElementById('output');
+let activeItem = null;
 
-    if (!window._piperReady) {
-      out.textContent = 'Piper is still loading, please wait...';
-      out.className = 'waiting';
-      return;
-    }
+window.load = function(key) {
+  const code = SNIPPETS[key];
+  if (!code) return;
+  document.getElementById('editor').value = code;
 
-    const code = document.getElementById('editor').value.trim();
-    if (!code) {
-      out.textContent = 'Nothing to run — write some Piper code first!';
-      out.className = 'waiting';
-      return;
-    }
+  // Update active sidebar item
+  if (activeItem) activeItem.classList.remove('active');
+  // find the clicked item
+  event.target.classList.add('active');
+  activeItem = event.target;
 
-    btn.disabled = true;
-    out.textContent = 'Running...';
+  // Clear output hint
+  const out = document.getElementById('output');
+  if (out.className === 'waiting') {
+    out.textContent = 'Click ▶ Run (or Cmd+Enter) to execute.';
+  }
+};
+
+// ── Runner ───────────────────────────────────────────────────────────────────
+window.runCode = async function() {
+  const btn = document.getElementById('runBtn');
+  const out = document.getElementById('output');
+
+  if (!window._piperReady) {
+    out.textContent = 'Piper is still loading, please wait...';
     out.className = 'waiting';
+    return;
+  }
 
-    try {
-      await new Promise(r => setTimeout(r, 10));
-      const result = window._runPiper(code);
-      out.textContent = result || '(no output)';
-      out.className = result ? '' : 'waiting';
-    } catch (e) {
-      out.textContent = 'Error: ' + e.message;
-      out.className = 'error';
-    } finally {
-      btn.disabled = false;
-    }
-  };
+  const code = document.getElementById('editor').value.trim();
+  if (!code) {
+    out.textContent = 'Nothing to run — write some Piper code first!';
+    out.className = 'waiting';
+    return;
+  }
 
-  // Ctrl+Enter / Cmd+Enter to run
-  document.getElementById('editor').addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      window.runCode();
-    }
-    // Tab inserts spaces
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const ta = e.target;
-      const s = ta.selectionStart;
-      ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(ta.selectionEnd);
-      ta.selectionStart = ta.selectionEnd = s + 4;
-    }
-  });
+  btn.disabled = true;
+  out.textContent = 'Running...';
+  out.className = 'waiting';
 
-  // Load hello world on start
-  loadExample('hello');
+  try {
+    await new Promise(r => setTimeout(r, 10));
+    const result = window._runPiper(code);
+    out.textContent = result || '(no output)';
+    out.className = result ? '' : 'waiting';
+  } catch (e) {
+    out.textContent = 'Error: ' + e.message;
+    out.className = 'error';
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.getElementById('editor').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    window.runCode();
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const ta = e.target;
+    const s = ta.selectionStart;
+    ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = s + 4;
+  }
+});
+
+// ── Divider drag ─────────────────────────────────────────────────────────────
+const divider = document.getElementById('divider');
+let dragging = false;
+divider.addEventListener('mousedown', () => { dragging = true; });
+document.addEventListener('mouseup',  () => { dragging = false; });
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const workspace = divider.parentElement;
+  const rect = workspace.getBoundingClientRect();
+  const sidebarWidth = document.getElementById('sidebar').offsetWidth;
+  const total = rect.width - sidebarWidth - 4;
+  const offset = e.clientX - rect.left - sidebarWidth;
+  const pct = Math.max(20, Math.min(80, (offset / total) * 100));
+  const panes = workspace.querySelectorAll('.pane');
+  panes[0].style.flex = 'none';
+  panes[0].style.width = pct + '%';
+  panes[1].style.flex = '1';
+});
+
+// ── Load default snippet ──────────────────────────────────────────────────────
+document.getElementById('editor').value = SNIPPETS['hello_world'];
 </script>
 
 </body>
