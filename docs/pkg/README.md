@@ -1,12 +1,14 @@
-# 🐍 Piper — AI-First Programming Language
+# Piper — AI-First Programming Language
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.7.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.9.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![WASM](https://img.shields.io/badge/runs%20in-browser%20(WASM)-purple)
 
-📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions in one place.
+🌐 **[Try it in your browser →](https://GaliRithvik.github.io/piper)** — no install needed
 
-⚡ **[Performance Analysis →](PERFORMANCE.md)** — benchmarks, Big-O zones, and where Piper beats Python.
+📖 **[Full Language Reference →](LANGUAGE.md)** — all syntax, operators, and built-in functions
+
+⚡ **[Performance Analysis →](PERFORMANCE.md)** — benchmarks, Big-O zones, and where Piper beats Python
 
 ---
 
@@ -41,45 +43,70 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 ## Features
 
 - **Python-like syntax** — clean, readable, easy to write
-- **Classes** — `class Foo:` with `init`, methods, `self`, field access (`obj.field`), method calls (`obj.method()`)
+- **Lambda / anonymous functions** — `fn(x) => x * 2`, composable and passable
+- **Closures** — lambdas capture their outer scope at creation time
+- **Classes** — `class Foo:` with `init`, methods, `self`, `__str__`, field access and assignment
+- **Inheritance** — `class Dog(Animal):` with `super.method(self, ...)` calls
+- **Static methods** — `static fn name():` called on the class directly
 - **90+ AI/ML built-ins** — activations, vector ops, matrix math, loss functions, random, data processing, metrics, ASCII visualization
 - **Dictionary type** — `{"key": val}` literals, indexing, and dict built-ins
+- **Dict comprehensions** — `{k: v for k in list}`
 - **Pipe operator** `|>` — chain functions elegantly
 - **List comprehensions** with `if` conditions
 - **F-strings** with format specs
+- **Triple-quoted strings** — `"""..."""` for multi-line literals
+- **Escape sequences** — `\n`, `\t`, `\\`, `\"` inside strings
 - **Membership operators** — `in` and `not in` for lists, strings, and dicts
+- **Null coalescing** `??` — `val ?? "default"` returns right side when left is `none`
+- **Optional chaining** `?.` — `obj?.field` returns `none` instead of crashing
+- **`*args` variadic functions** — `fn f(*nums)` collects all extra args into a list
+- **Named arguments** — `greet(name="Alice", greeting="Hi")`
+- **Modules / import** — `import "file.piper"` loads another Piper file
 - **Loop control** — `break` and `continue` in `for` and `while` loops
-- **Error handling** — `try / except` blocks
+- **Error handling** — `try / except` blocks with line numbers in error messages
 - **Negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
-- **Slicing** — `arr[1:4]`, `s[:3]`, `arr[-3:]`, `arr[1:-1]`
+- **Slicing with step** — `arr[1:4]`, `arr[::2]`, `arr[::-1]`, `arr[1:10:2]`
 - **Default parameters** — `fn greet(name, msg="Hello"):`
 - **`..` range syntax** — `for i in 1..10` instead of `range(1, 11)`
-- **`case / of`** — clean pattern matching, replaces long `if/elif` chains
+- **`case / of`** — clean pattern matching
 - **Tuple unpacking** — `let (loss, acc) = train(X, y)`
 - **`result` implicit return** — set `result = x` instead of `return x`
 - **Short print** — `p(Hello World);` instead of `print("Hello World")`
-- **Rust-powered** — fast tree-walk interpreter (~2× faster than CPython for compute-heavy loops)
+- **Rust-powered** — fast tree-walk interpreter, ~2× faster than CPython for compute-heavy loops
+- **WebAssembly** — runs in the browser, no install required
 
 ---
 
 ## Syntax Showcase
 
 ```python
-# Print shorthand
-p(Hello Piper!);
-
 # Variables & math
 let x = 42
 let name = "Piper"
+
+# Lambda functions
+let double = fn(x) => x * 2
+let square = fn(x) => x * x
+print(double(5))                             # 10
+print(map([1,2,3,4,5], fn(x) => x * x))     # [1, 4, 9, 16, 25]
+print(filter([1,2,3,4,5], fn(x) => x % 2 == 0))  # [2, 4]
 
 # List comprehension with condition
 let evens = [x for x in range(1, 11) if x % 2 == 0]
 
 # Functions
-fn square(x): return x * x
+fn fib(n):
+    if n <= 1: return n
+    return fib(n - 1) + fib(n - 2)
 
 # Pipe operator
 let result = [1, 2, 3] |> sum |> str
+
+# Slicing with step
+let lst = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+print(lst[::2])    # [0, 2, 4, 6, 8]
+print(lst[::-1])   # [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+print(lst[1:8:2])  # [1, 3, 5, 7]
 
 # Dictionary
 let person = {"name": "Alice", "age": 30}
@@ -93,22 +120,18 @@ let fruits = ["apple", "banana", "cherry"]
 print("apple" in fruits)       # true
 print("grape" not in fruits)   # true
 print("an" in "banana")        # true
-print("name" in person)        # true
 
 # break / continue
 for i in range(1, 10):
-    if i == 5:
-        break
-    if i % 2 == 0:
-        continue
+    if i == 5: break
+    if i % 2 == 0: continue
     print(i)   # 1 3
 
-# try / except
+# try / except with line numbers in errors
 try:
-    let arr = [1, 2, 3]
-    let x = arr[99]
+    let x = undefined_var
 except err:
-    print(err)   # Index 99 out of bounds
+    print(err)   # [line N] Undefined variable: 'undefined_var'
 
 # .. range (inclusive)
 for i in 1..5:
@@ -120,7 +143,7 @@ case activation:
     of "sigmoid": return sigmoid(z)
     else:         return z
 
-# Tuple unpacking — multiple return values
+# Tuple unpacking
 fn min_max(data): return (min(data), max(data))
 let (lo, hi) = min_max([3, 1, 9, 2])
 
@@ -130,7 +153,7 @@ fn classify(score):
     elif score >= 75: result = "B"
     else: result = "C"
 
-# Classes
+# Classes with OOP
 class Dog:
     fn init(self, name, breed):
         self.name = name
@@ -141,50 +164,22 @@ class Dog:
         print(self.name + " says: Woof!")
 
     fn learn(self, trick):
-        append(self.tricks, trick)   # append mutates in place
+        append(self.tricks, trick)
 
 let d = Dog("Rex", "Labrador")
-d.bark()                             # Rex says: Woof!
+d.bark()            # Rex says: Woof!
 d.learn("sit")
-print(d.name)                        # Rex
-print(type(d))                       # Dog
+print(d.name)       # Rex
+print(type(d))      # Dog
 
-# AI activations
+# AI activations & matrix ops
 let z = [-2, -1, 0, 1, 2]
 let activated = relu(z)
-let probs     = softmax([1.5, 0.8, 2.3])
-
-# Matrix operations
+let probs = softmax([1.5, 0.8, 2.3])
 let A = [[1, 2], [3, 4]]
 let B = [[5, 6], [7, 8]]
 let C = matmul(A, B)   # [[19, 22], [43, 50]]
-
-# Loss functions
-let loss = mse(y_true, y_pred)
 ```
-
----
-
-## demo.piper — What's Inside
-
-Run it with `cargo run -- examples/demo.piper`
-
-| # | Section | What it demonstrates | Example output |
-|---|---|---|---|
-| 1 | **Variables & Arithmetic** | `let`, math ops, `round()`, `str()` | `Rectangle: 12 x 5 = 60`, `Circle area: 153.94` |
-| 2 | **Strings** | `len`, `upper`, `lower`, `trim`, `split`, `join` | `PIPER -> piper`, `Split: [one, two, three]` |
-| 3 | **Conditionals** | `if / elif / else` | `Temperature: 28C → Warm and pleasant.` |
-| 4 | **Functions & Default Params** | `fn`, recursion, default args `fn greet(name, msg="Hello")` | `Hello, Piper!`, `Hi, Rithvik!`, `7! = 5040` |
-| 5 | **For Loop** | `for`, `range()`, prime sieve | `Primes up to 30: 2 3 5 7 11 13 17 19 23 29` |
-| 6 | **While Loop** | `while`, FizzBuzz | `Fizz`, `Buzz`, `FizzBuzz` for 1–20 |
-| 7 | **List Comprehensions** | `[x*x for x in ...]`, filter with `if` | `Squares: [1, 4, 9, 16, 25]` |
-| 8 | **Dictionaries** | `{}`, indexing, `keys`, `has_key`, `get`, `del_key` | `Name: Rithvik`, `Country: not set` |
-| 9 | **in / not in** | list membership, substring, dict key, inside loop | `apple in fruits: true`, `'an' in 'banana': true` |
-| 10 | **break / continue** | skip evens, stop at multiple of 7 | `1 3 5 7`, `Stopped at 7, Total = 21` |
-| 11 | **Higher-order Functions** | `map`, `filter`, `reduce`, `enumerate` | `map(double): [2,4,6,8...]`, `reduce(add): 36` |
-| 12 | **try / except** | catch errors, `safe_divide` with error handling | `Caught: Index 99 out of bounds`, `10/2 = 5` |
-| 13 | **Negative Indexing** | `arr[-1]`, `s[-2]`, negative index assignment | `Last: purple`, `After: [red, ..., pink]` |
-| 14 | **Slicing** | `arr[2:5]`, `arr[:4]`, `arr[-3:]`, `arr[1:-1]`, string slices | `[30, 40, 50]`, `phrase[7:12]: Piper` |
 
 ---
 
@@ -211,78 +206,38 @@ Run it with `cargo run -- examples/demo.piper`
 
 ---
 
-## Getting Started
-
-### Requirements
-
-- [Rust](https://rustup.rs/) installed
-
-### Run a file
-
-```bash
-cargo run -- examples/demo.piper               # full language demo (14 sections)
-cargo run -- examples/ai_demo.piper            # AI/ML activations, vectors, loss
-cargo run -- examples/nim_features_test.piper  # v0.5: .., case/of, tuples, result
-cargo run -- examples/aiml_builtins_test.piper # v0.6: random, metrics, plot
-cargo run -- examples/classes_test.piper       # v0.7: classes, init, methods, self
-```
-
-### Start the REPL
-
-```bash
-cargo run
-```
-
----
-
-## VS Code Integration
-
-### Step 1 — Install the syntax highlighting extension
-
-**Mac/Linux:**
-```bash
-cp -r vscode-extension ~/.vscode/extensions/piper-language
-```
-
-**Windows:**
-```bash
-xcopy /E /I vscode-extension "%USERPROFILE%\.vscode\extensions\piper-language"
-```
-
-Then reload VS Code (`Cmd+Shift+P` → **Reload Window**).
-
-### Step 2 — Run your `.piper` file
-
-Open the `piper/` folder in VS Code, open any `.piper` file, and press **`Cmd+Shift+B`** (Mac) or **`Ctrl+Shift+B`** (Windows/Linux).
-
-Output appears in the integrated terminal.
-
----
-
 ## Project Structure
 
 ```
 piper/
-├── Cargo.toml
+├── Cargo.toml                    # Rust package config (bin + cdylib for WASM)
 ├── src/
 │   ├── main.rs                   # CLI entry point + REPL
-│   ├── lexer.rs                  # Tokenizer
-│   ├── parser.rs                 # AST + recursive descent parser
-│   └── interpreter.rs            # Tree-walk interpreter (90+ built-ins)
+│   ├── lib.rs                    # WASM entry point (wasm-bindgen)
+│   ├── lexer.rs                  # Tokenizer — Token stream with line number markers
+│   ├── parser.rs                 # AST definitions + recursive descent parser
+│   └── interpreter.rs            # Tree-walk interpreter — 90+ built-ins
+│
+├── docs/                         # GitHub Pages — browser playground
+│   ├── index.html                # Playground UI (editor + output split pane)
+│   └── pkg/                      # Compiled WebAssembly (wasm-pack output)
+│       ├── piper.js              # JS bindings generated by wasm-bindgen
+│       ├── piper_bg.wasm         # Compiled Piper interpreter
+│       └── piper.d.ts            # TypeScript type declarations
 │
 ├── examples/
 │   ├── demo.piper                # Full language demo (14 sections)
 │   ├── ai_demo.piper             # AI/ML showcase
+│   ├── messaging.piper           # PiperChat — CLI messaging app
 │   ├── nn_forward.piper          # Neural net forward pass in Piper
 │   ├── nn_forward.py             # Same in Python (comparison)
 │   ├── nim_features_test.piper   # v0.5 features: .., case/of, tuples, result
 │   ├── features_test.piper       # v0.4 features: slicing, negative index, defaults
-│   ├── aiml_builtins_test.piper  # v0.6 AI/ML built-ins: random, batch, metrics, plot
-│   ├── classes_test.piper        # v0.7 class syntax: init, methods, self, field access
+│   ├── aiml_builtins_test.piper  # v0.6 AI/ML built-ins
+│   ├── classes_test.piper        # v0.7 class syntax
 │   ├── benchmark.piper           # Performance benchmark
 │   ├── benchmark_pure.py         # Pure Python benchmark
-│   ├── benchmark_numpy.py        # NumPy benchmark
-│   └── generate_chart.py         # Generates performance_chart.png
+│   └── benchmark_numpy.py        # NumPy benchmark
 │
 ├── vscode-extension/             # VS Code syntax highlighting (install locally)
 │   ├── package.json
@@ -299,32 +254,90 @@ piper/
 
 ---
 
+## Browser Playground
+
+Piper compiles to **WebAssembly** and runs entirely in the browser — no install, no server.
+
+**[Try it → GaliRithvik.github.io/piper](https://GaliRithvik.github.io/piper)**
+
+Built with `wasm-pack` + `wasm-bindgen`, hosted via GitHub Pages from the `docs/` folder.
+
+To rebuild WASM locally after changing interpreter code:
+```bash
+wasm-pack build --target web --out-dir docs/pkg
+```
+
+---
+
+## VS Code Integration
+
+### Step 1 — Install syntax highlighting
+
+**Mac/Linux:**
+```bash
+cp -r vscode-extension ~/.vscode/extensions/piper-language
+```
+
+**Windows:**
+```bash
+xcopy /E /I vscode-extension "%USERPROFILE%\.vscode\extensions\piper-language"
+```
+
+Reload VS Code (`Cmd+Shift+P` → **Reload Window**).
+
+### Step 2 — Run your `.piper` file
+
+Open the `piper/` folder in VS Code, open any `.piper` file, and press **`Cmd+Shift+B`** (Mac) or **`Ctrl+Shift+B`** (Windows/Linux).
+
+---
+
 ## Changelog
 
+### v0.9.0
+- Added **inheritance** — `class Dog(Animal):` extends a parent class
+- Added **`super`** — call parent methods with `super.method(self, ...)`
+- Added **static methods** — `static fn name():` called on the class directly
+- Added **`__str__`** — custom string representation for instances
+- Added **closures** — lambdas capture outer scope variables at creation time
+- Added **`*args`** variadic parameters — `fn f(*nums)` collects all positional args into a list
+- Added **named arguments** — `greet(name="Alice", greeting="Hi")`
+- Added **`import`** — `import "file.piper"` loads another Piper source file
+- Added **dict comprehensions** — `{k: v for k in iter if cond}`
+- Added **triple-quoted strings** — `"""..."""` for multi-line string literals
+- Added **escape sequences** — `\n`, `\t`, `\r`, `\\`, `\"`, `\'` inside strings
+- Added **null coalescing** `??` — `val ?? fallback`
+- Added **optional chaining** `?.` — `obj?.field` returns `none` safely
+- Added **`sort` with key function** — `sort(list, fn(x) => x.name)`
+- Improved **REPL** — multiline input: lines ending with `:` prompt for continuation
+
+### v0.8.0
+- Added **lambda / anonymous functions** — `fn(x) => x * 2`, works with `map`, `filter`, `reduce`
+- Added **line numbers in error messages** — `[line 7] Undefined variable: 'foo'`
+- Added **slice with step** — `list[::2]`, `list[::-1]`, `list[1:10:2]`
+- Fixed **instance equality** — `==` now compares fields by value, not object identity
+- Fixed **string comparison** — `<`, `>`, `<=`, `>=` use lexicographic order for strings
+- Fixed **`f1_score`** internal argument duplication bug
+- Launched **WebAssembly browser playground** at [GaliRithvik.github.io/piper](https://GaliRithvik.github.io/piper)
+
 ### v0.7.0
-- Added **`class` keyword** — define classes with methods
-- Added **`init` method** — constructor called automatically on instantiation
-- Added **`self`** — first param of every method, bound to the instance
-- Added **field access** — `obj.field` reads instance fields
-- Added **method calls** — `obj.method(args)` dispatches to class methods
-- Added **attribute assignment** — `self.field = value` and `self.field += value`
-- Added **chaining** — `obj.a.b`, `obj.method().field` all supported
+- Added **`class` keyword** — OOP with `init`, methods, `self`, field access and assignment
+- Added **method chaining** — `obj.method().field`
 
 ### v0.6.0
 - Added **Random built-ins** — `seed`, `rand`, `randn`, `randint`, `shuffle`, `choice`
 - Added **Data processing** — `batch`, `train_test_split`, `standardize`, `normalize_rows`
 - Added **Evaluation metrics** — `accuracy`, `precision`, `recall`, `f1_score`, `r2_score`, `confusion_matrix`
-- Added **ASCII visualization** — `plot` (line chart), `bar_chart` (bar chart) — see results in terminal, no dependencies
+- Added **ASCII visualization** — `plot` (line chart), `bar_chart`
 
 ### v0.5.0
-- Added **`..` range syntax** — `for i in 1..10` (inclusive, Nim-inspired)
-- Added **`case / of`** — pattern matching, cleaner than `if/elif` chains
-- Added **tuple unpacking** — `let (a, b) = fn()` and `(x, y)` tuple literals
-- Added **`result` implicit return** — set `result = val` instead of `return val`
+- Added **`..` range syntax** — `for i in 1..10` (inclusive)
+- Added **`case / of`** — pattern matching
+- Added **tuple unpacking** — `let (a, b) = fn()`
+- Added **`result` implicit return**
 
 ### v0.4.0
-- Added **negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
-- Added **slicing** — `arr[1:4]`, `s[:3]`, `arr[-3:]`, `arr[1:-1]`
+- Added **negative indexing** — `arr[-1]`, `s[-2]`
+- Added **slicing** — `arr[1:4]`, `s[:3]`, `arr[-3:]`
 - Added **default parameters** — `fn greet(name, msg="Hello"):`
 
 ### v0.3.0

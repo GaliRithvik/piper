@@ -22,8 +22,10 @@ Complete guide to Piper's syntax and built-in functions.
 14. [Pipe Operator](#14-pipe-operator)
 15. [Error Handling](#15-error-handling)
 16. [Classes](#16-classes)
-17. [Built-in Functions](#17-built-in-functions)
-    - Random, Data Processing, Evaluation Metrics, ASCII Visualization (v0.6)
+17. [Modules (Import)](#17-modules-import)
+18. [Advanced Functions](#18-advanced-functions)
+19. [Dict Comprehensions](#19-dict-comprehensions)
+20. [Built-in Functions](#20-built-in-functions)
 
 ---
 
@@ -106,6 +108,31 @@ let info = {"name": "Piper", "version": 3}
 
 Works on **lists**, **strings** (substring), and **dicts** (key check).
 
+### Null Coalescing (`??`)
+
+Returns the left side if it's not `none`, otherwise the right side:
+
+```python
+let val = none
+print(val ?? "default")   # default
+
+let x = 5
+print(x ?? 99)            # 5
+```
+
+### Optional Chaining (`?.`)
+
+Safely access a field or call a method on a possibly-`none` value — returns `none` instead of crashing:
+
+```python
+let obj = none
+print(obj?.name)          # none
+print(obj?.greet())       # none
+
+let user = Person("Alice")
+print(user?.name)         # Alice  (normal access when non-nil)
+```
+
 ### Assignment
 ```python
 x += 1
@@ -151,6 +178,35 @@ let full = "Hello" + " " + "World"
 
 # Indexing
 let first = s[0]              # "H"
+```
+
+### Escape Sequences
+
+| Sequence | Meaning |
+|---|---|
+| `\n` | Newline |
+| `\t` | Tab |
+| `\r` | Carriage return |
+| `\\` | Backslash |
+| `\"` | Double quote |
+| `\'` | Single quote |
+| `\0` | Null character |
+
+```python
+let msg = "Line 1\nLine 2"
+let path = "C:\\Users\\name"
+```
+
+### Triple-Quoted Strings
+
+```python
+let text = """This is a
+multi-line string
+with no escapes needed."""
+print(text)
+# This is a
+# multi-line string
+# with no escapes needed.
 ```
 
 ---
@@ -620,6 +676,72 @@ print(type(Dog))    # class Dog
 print(type(d))      # Dog
 ```
 
+### `__str__` — Custom String Representation
+
+Define `__str__` to control how `str()` and `print()` format your object:
+
+```python
+class Point:
+    fn init(self, x, y):
+        self.x = x
+        self.y = y
+    fn __str__(self):
+        return "Point(" + str(self.x) + ", " + str(self.y) + ")"
+
+let p = Point(3, 4)
+print(p)          # Point(3, 4)
+print(str(p))     # Point(3, 4)
+```
+
+### Inheritance
+
+Extend a class using `ClassName(Parent)` syntax. Child classes inherit all parent methods and can override them:
+
+```python
+class Animal:
+    fn init(self, name, sound):
+        self.name = name
+        self.sound = sound
+
+    fn speak(self):
+        print(self.name + " says " + self.sound)
+
+class Dog(Animal):
+    fn init(self, name):
+        super.init(self, name, "Woof")
+        self.tricks = []
+
+    fn learn(self, trick):
+        append(self.tricks, trick)
+
+let d = Dog("Rex")
+d.speak()          # Rex says Woof
+d.learn("sit")
+print(d.tricks)    # [sit]
+```
+
+- **`super`** — reference to the parent class; call `super.method(self, ...)` to invoke a parent method
+- Child classes automatically inherit all parent methods
+- Override a method simply by redefining it in the child class
+
+### Static Methods
+
+Declare methods that belong to the class, not an instance, using `static fn`:
+
+```python
+class MathUtils:
+    static fn add(a, b):
+        return a + b
+
+    static fn square(x):
+        return x * x
+
+print(MathUtils.add(3, 4))    # 7
+print(MathUtils.square(5))    # 25
+```
+
+Static methods have no `self` parameter and are called on the class name directly.
+
 ### Notes
 
 - Methods are defined inside the class body with `fn`
@@ -629,7 +751,90 @@ print(type(d))      # Dog
 
 ---
 
-## 17. Built-in Functions
+## 17. Modules (Import)
+
+Split code into multiple files and import them with `import`:
+
+```python
+# mathlib.piper
+fn add(a, b):
+    return a + b
+
+let PI = 3.14159
+```
+
+```python
+# main.piper
+import "mathlib.piper"
+print(add(3, 4))   # 7
+print(PI)          # 3.14159
+```
+
+- Imported code runs in the current scope — all functions and variables become available
+- Paths can be absolute or relative to the working directory
+
+---
+
+## 18. Advanced Functions
+
+### Variadic Functions (`*args`)
+
+Use `*name` to collect any number of positional arguments into a list:
+
+```python
+fn sum_all(*nums):
+    let total = 0
+    for n in nums:
+        total += n
+    return total
+
+print(sum_all(1, 2, 3, 4, 5))   # 15
+```
+
+### Named Arguments
+
+Call any function with `name=value` syntax — order doesn't matter:
+
+```python
+fn greet(name, greeting="Hello"):
+    print(greeting + ", " + name + "!")
+
+greet(greeting="Hi", name="Alice")   # Hi, Alice!
+greet("Bob")                          # Hello, Bob!
+```
+
+### Closures
+
+Lambda functions capture variables from the enclosing scope:
+
+```python
+fn make_adder(n):
+    return fn(x) => x + n
+
+let add5 = make_adder(5)
+print(add5(10))   # 15
+print(add5(20))   # 25
+```
+
+Closures capture the scope at creation time, so `n` stays fixed to `5` regardless of what happens to `n` afterward.
+
+---
+
+## 19. Dict Comprehensions
+
+Build a dictionary in one expression using `{key: val for var in iter}`:
+
+```python
+let squares = {x: x*x for x in range(1, 6)}
+# {1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+
+let evens = {x: x*2 for x in range(10) if x % 2 == 0}
+# {0: 0, 2: 4, 4: 8, 6: 12, 8: 16}
+```
+
+---
+
+## 20. Built-in Functions
 
 ### I/O
 | Function | Description |

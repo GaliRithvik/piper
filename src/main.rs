@@ -24,9 +24,14 @@ fn run_file(path: &str) {
     interpreter::run(ast);
 }
 
+fn needs_continuation(line: &str) -> bool {
+    let trimmed = line.trim_end();
+    trimmed.ends_with(':') || trimmed.ends_with('\\')
+}
+
 fn run_repl() {
-    println!("Piper v0.1.0 — Python-like syntax, Rust-powered");
-    println!("Type 'exit' to quit.\n");
+    println!("Piper v0.9.0 — Python-like syntax, Rust-powered");
+    println!("Type 'exit' to quit. Use blank line to finish multi-line blocks.\n");
 
     let stdin = io::stdin();
     let mut interp = interpreter::Interpreter::new();
@@ -35,13 +40,27 @@ fn run_repl() {
         print!(">>> ");
         io::stdout().flush().unwrap();
 
-        let mut line = String::new();
-        if stdin.lock().read_line(&mut line).unwrap() == 0 { break; }
-        let trimmed = line.trim();
+        let mut first_line = String::new();
+        if stdin.lock().read_line(&mut first_line).unwrap() == 0 { break; }
+        let trimmed = first_line.trim();
         if trimmed == "exit" { break; }
         if trimmed.is_empty() { continue; }
 
-        let tokens = lexer::tokenize(trimmed);
+        let mut source = first_line.clone();
+
+        // Accumulate continuation lines for blocks (ending with ':')
+        if needs_continuation(trimmed) {
+            loop {
+                print!("... ");
+                io::stdout().flush().unwrap();
+                let mut cont = String::new();
+                if stdin.lock().read_line(&mut cont).unwrap() == 0 { break; }
+                if cont.trim().is_empty() { break; }
+                source.push_str(&cont);
+            }
+        }
+
+        let tokens = lexer::tokenize(&source);
         let ast    = parser::parse(tokens);
         interp.exec(&ast);
     }

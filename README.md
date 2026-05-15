@@ -2,7 +2,7 @@
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.8.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![WASM](https://img.shields.io/badge/runs%20in-browser%20(WASM)-purple)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.9.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![WASM](https://img.shields.io/badge/runs%20in-browser%20(WASM)-purple)
 
 🌐 **[Try it in your browser →](https://GaliRithvik.github.io/piper)** — no install needed
 
@@ -44,13 +44,24 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 
 - **Python-like syntax** — clean, readable, easy to write
 - **Lambda / anonymous functions** — `fn(x) => x * 2`, composable and passable
-- **Classes** — `class Foo:` with `init`, methods, `self`, field access and assignment
+- **Closures** — lambdas capture their outer scope at creation time
+- **Classes** — `class Foo:` with `init`, methods, `self`, `__str__`, field access and assignment
+- **Inheritance** — `class Dog(Animal):` with `super.method(self, ...)` calls
+- **Static methods** — `static fn name():` called on the class directly
 - **90+ AI/ML built-ins** — activations, vector ops, matrix math, loss functions, random, data processing, metrics, ASCII visualization
 - **Dictionary type** — `{"key": val}` literals, indexing, and dict built-ins
+- **Dict comprehensions** — `{k: v for k in list}`
 - **Pipe operator** `|>` — chain functions elegantly
 - **List comprehensions** with `if` conditions
 - **F-strings** with format specs
+- **Triple-quoted strings** — `"""..."""` for multi-line literals
+- **Escape sequences** — `\n`, `\t`, `\\`, `\"` inside strings
 - **Membership operators** — `in` and `not in` for lists, strings, and dicts
+- **Null coalescing** `??` — `val ?? "default"` returns right side when left is `none`
+- **Optional chaining** `?.` — `obj?.field` returns `none` instead of crashing
+- **`*args` variadic functions** — `fn f(*nums)` collects all extra args into a list
+- **Named arguments** — `greet(name="Alice", greeting="Hi")`
+- **Modules / import** — `import "file.piper"` loads another Piper file
 - **Loop control** — `break` and `continue` in `for` and `while` loops
 - **Error handling** — `try / except` blocks with line numbers in error messages
 - **Negative indexing** — `arr[-1]`, `s[-2]` for lists and strings
@@ -281,6 +292,23 @@ Open the `piper/` folder in VS Code, open any `.piper` file, and press **`Cmd+Sh
 ---
 
 ## Changelog
+
+### v0.9.0
+- Added **inheritance** — `class Dog(Animal):` extends a parent class
+- Added **`super`** — call parent methods with `super.method(self, ...)`
+- Added **static methods** — `static fn name():` called on the class directly
+- Added **`__str__`** — custom string representation for instances
+- Added **closures** — lambdas capture outer scope variables at creation time
+- Added **`*args`** variadic parameters — `fn f(*nums)` collects all positional args into a list
+- Added **named arguments** — `greet(name="Alice", greeting="Hi")`
+- Added **`import`** — `import "file.piper"` loads another Piper source file
+- Added **dict comprehensions** — `{k: v for k in iter if cond}`
+- Added **triple-quoted strings** — `"""..."""` for multi-line string literals
+- Added **escape sequences** — `\n`, `\t`, `\r`, `\\`, `\"`, `\'` inside strings
+- Added **null coalescing** `??` — `val ?? fallback`
+- Added **optional chaining** `?.` — `obj?.field` returns `none` safely
+- Added **`sort` with key function** — `sort(list, fn(x) => x.name)`
+- Improved **REPL** — multiline input: lines ending with `:` prompt for continuation
 
 ### v0.8.0
 - Added **lambda / anonymous functions** — `fn(x) => x * 2`, works with `map`, `filter`, `reduce`

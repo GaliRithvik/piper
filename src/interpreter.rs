@@ -67,15 +67,17 @@ pub enum Value {
     Nil,
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
-    Fn { params: Vec<(String, Option<Value>)>, body: Vec<Stmt> },
+    Fn { params: Vec<(String, Option<Value>)>, body: Vec<Stmt>, closure: HashMap<String, Value> },
     Class {
         name: String,
         methods: Rc<HashMap<String, Value>>,
+        parent: Option<String>,
     },
     Instance {
         class_name: String,
         fields: Rc<RefCell<HashMap<String, Value>>>,
         methods: Rc<HashMap<String, Value>>,
+        parent_methods: Option<Rc<HashMap<String, Value>>>,
     },
 }
 
@@ -90,7 +92,7 @@ impl std::fmt::Display for Value {
             Value::Bool(b)   => write!(f, "{}", b),
             Value::Nil       => write!(f, "none"),
             Value::Fn { .. } => write!(f, "<fn>"),
-            Value::Class { name, .. } => write!(f, "<class {}>", name),
+            Value::Class { name, .. }  => write!(f, "<class {}>", name),
             Value::Instance { class_name, fields, .. } => {
                 let mut pairs: Vec<String> = fields.borrow().iter()
                     .map(|(k, v)| format!("{}: {}", k, v))
@@ -153,6 +155,11 @@ fn values_eq(a: &Value, b: &Value) -> bool {
         }
         _ => false,
     }
+}
+
+fn method_key(name: &str, is_static: bool) -> &str {
+    let _ = is_static;
+    name
 }
 
 fn make_list(v: Vec<Value>) -> Value {
@@ -270,25 +277,49 @@ impl Interpreter {
             Stmt::Break    => Some(Signal::Break),
             Stmt::Continue => Some(Signal::Continue),
 
-            Stmt::Fn { name, params, body } => {
+            Stmt::Fn { name, params, body, .. } => {
                 let resolved: Vec<(String, Option<Value>)> = params.iter()
                     .map(|(p, def)| (p.clone(), def.as_ref().map(|e| self.eval(e))))
                     .collect();
-                self.set(name.clone(), Value::Fn { params: resolved, body: body.clone() });
+                self.set(name.clone(), Value::Fn { params: resolved, body: body.clone(), closure: HashMap::new() });
                 None
             }
 
-            Stmt::ClassDef { name, methods } => {
+            Stmt::ClassDef { name, parent, methods } => {
+                // Inherit parent methods first
                 let mut method_map: HashMap<String, Value> = HashMap::new();
+                let mut parent_methods_rc: Option<Rc<HashMap<String, Value>>> = None;
+                if let Some(pname) = parent {
+                    if let Ok(Value::Class { methods: pm, .. }) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.get(pname))) {
+                        parent_methods_rc = Some(pm.clone());
+                        for (k, v) in pm.iter() { method_map.insert(k.clone(), v.clone()); }
+                    }
+                }
+                // Add/override with own methods
                 for m in methods {
-                    if let Stmt::Fn { name: mname, params, body } = m {
+                    if let Stmt::Fn { name: mname, params, body, is_static } = m {
                         let resolved: Vec<(String, Option<Value>)> = params.iter()
                             .map(|(p, def)| (p.clone(), def.as_ref().map(|e| self.eval(e))))
                             .collect();
-                        method_map.insert(mname.clone(), Value::Fn { params: resolved, body: body.clone() });
+                        let key = if *is_static { format!("static::{}", mname) } else { mname.clone() };
+                        method_map.insert(key, Value::Fn { params: resolved, body: body.clone(), closure: HashMap::new() });
                     }
                 }
-                self.set(name.clone(), Value::Class { name: name.clone(), methods: Rc::new(method_map) });
+                let _ = parent_methods_rc; // consumed above
+                self.set(name.clone(), Value::Class {
+                    name: name.clone(),
+                    methods: Rc::new(method_map),
+                    parent: parent.clone(),
+                });
+                None
+            }
+
+            Stmt::Import { path } => {
+                let source = std::fs::read_to_string(path)
+                    .unwrap_or_else(|_| panic!("[line {}] Cannot import '{}': file not found", self.current_line, path));
+                let tokens = crate::lexer::tokenize(&source);
+                let ast = crate::parser::parse(tokens);
+                self.exec(&ast);
                 None
             }
 
@@ -432,7 +463,29 @@ impl Interpreter {
                         }
                         make_list(result)
                     }
-                    _ => panic!("List comprehension requires a list"),
+                    _ => panic!("[line {}] List comprehension requires a list", self.current_line),
+                }
+            }
+
+            Expr::DictComp { key, val, var, iter, cond } => {
+                let iter_val = self.eval(iter);
+                match iter_val {
+                    Value::List(l) => {
+                        let items: Vec<Value> = l.borrow().clone();
+                        let mut result: HashMap<String, Value> = HashMap::new();
+                        for item in items {
+                            self.set(var.clone(), item);
+                            if let Some(c) = cond {
+                                let cv = self.eval(c);
+                                if !is_truthy(&cv) { continue; }
+                            }
+                            let k = self.eval(key).to_string();
+                            let v = self.eval(val);
+                            result.insert(k, v);
+                        }
+                        Value::Dict(Rc::new(RefCell::new(result)))
+                    }
+                    _ => panic!("[line {}] Dict comprehension requires a list", self.current_line),
                 }
             }
 
@@ -461,10 +514,15 @@ impl Interpreter {
             }
 
             Expr::Lambda { params, body } => {
+                // Capture the current visible scope as a closure
+                let closure: HashMap<String, Value> = self.scopes.iter()
+                    .flat_map(|s| s.iter())
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
                 let resolved: Vec<(String, Option<Value>)> = params.iter()
                     .map(|p| (p.clone(), None))
                     .collect();
-                Value::Fn { params: resolved, body: vec![Stmt::Return((**body).clone())] }
+                Value::Fn { params: resolved, body: vec![Stmt::Return((**body).clone())], closure }
             }
 
             Expr::Slice { object, start, end, step } => {
@@ -536,6 +594,24 @@ impl Interpreter {
             }
 
             Expr::BinOp { op, left, right } => {
+                // Short-circuit operators
+                match op {
+                    BinOpKind::And => {
+                        let l = self.eval(left);
+                        if !is_truthy(&l) { return Value::Bool(false); }
+                        return Value::Bool(is_truthy(&self.eval(right)));
+                    }
+                    BinOpKind::Or => {
+                        let l = self.eval(left);
+                        if is_truthy(&l) { return Value::Bool(true); }
+                        return Value::Bool(is_truthy(&self.eval(right)));
+                    }
+                    BinOpKind::NullCoalesce => {
+                        let l = self.eval(left);
+                        return if matches!(l, Value::Nil) { self.eval(right) } else { l };
+                    }
+                    _ => {}
+                }
                 let l = self.eval(left);
                 let r = self.eval(right);
                 Self::apply_binop(op, l, r)
@@ -549,41 +625,126 @@ impl Interpreter {
                 }
             }
 
-            Expr::Call { name, args } => {
+            Expr::Call { name, args, kwargs } => {
                 let arg_vals: Vec<Value> = args.iter().map(|a| self.eval(a)).collect();
-                self.call_builtin(name, arg_vals)
-                    .unwrap_or_else(|av| self.call_user(name, av))
+                let kw_vals: HashMap<String, Value> = kwargs.iter()
+                    .map(|(k, v)| (k.clone(), self.eval(v))).collect();
+                self.call_builtin(name, arg_vals, &kw_vals)
+                    .unwrap_or_else(|av| self.call_user_kw(name, av, kw_vals))
             }
 
             Expr::Attribute { object, field } => {
                 let obj = self.eval(object);
-                if let Value::Instance { fields, .. } = obj {
-                    fields.borrow().get(field).cloned().unwrap_or(Value::Nil)
-                } else {
-                    panic!("Cannot access attribute '{}' on non-instance value", field)
+                match obj {
+                    Value::Instance { ref fields, .. } =>
+                        fields.borrow().get(field).cloned().unwrap_or(Value::Nil),
+                    Value::Class { ref methods, .. } =>
+                        methods.get(method_key(field, false)).cloned()
+                            .or_else(|| methods.get(field).cloned())
+                            .unwrap_or(Value::Nil),
+                    _ => panic!("[line {}] Cannot access attribute '{}' on {:?}", self.current_line, field, obj),
                 }
             }
 
-            Expr::MethodCall { object, method, args } => {
+            Expr::OptionalAttribute { object, field } => {
+                let obj = self.eval(object);
+                if matches!(obj, Value::Nil) { return Value::Nil; }
+                if let Value::Instance { ref fields, .. } = obj {
+                    fields.borrow().get(field).cloned().unwrap_or(Value::Nil)
+                } else { Value::Nil }
+            }
+
+            Expr::MethodCall { object, method, args, kwargs } => {
                 let obj = self.eval(object);
                 let arg_vals: Vec<Value> = args.iter().map(|a| self.eval(a)).collect();
-                match obj.clone() {
-                    Value::Instance { ref fields, ref methods, .. } => {
-                        // Fields take priority (allows stored callables)
-                        if let Some(func) = fields.borrow().get(method.as_str()).cloned() {
-                            return self.call_value(&func, arg_vals);
-                        }
-                        // Class method: prepend self
-                        if let Some(func) = methods.get(method.as_str()).cloned() {
-                            let mut call_args = vec![obj.clone()];
-                            call_args.extend(arg_vals);
-                            return self.call_value(&func, call_args);
-                        }
-                        panic!("'{}' has no method '{}'", obj, method)
-                    }
-                    _ => panic!("Cannot call method '{}' on non-instance value", method),
-                }
+                let kw_vals: HashMap<String, Value> = kwargs.iter()
+                    .map(|(k, v)| (k.clone(), self.eval(v))).collect();
+                self.dispatch_method(obj, method, arg_vals, kw_vals)
             }
+
+            Expr::OptionalMethodCall { object, method, args, kwargs } => {
+                let obj = self.eval(object);
+                if matches!(obj, Value::Nil) { return Value::Nil; }
+                let arg_vals: Vec<Value> = args.iter().map(|a| self.eval(a)).collect();
+                let kw_vals: HashMap<String, Value> = kwargs.iter()
+                    .map(|(k, v)| (k.clone(), self.eval(v))).collect();
+                self.dispatch_method(obj, method, arg_vals, kw_vals)
+            }
+        }
+    }
+
+    fn dispatch_method(&mut self, obj: Value, method: &str, arg_vals: Vec<Value>, kw_vals: HashMap<String, Value>) -> Value {
+        match obj.clone() {
+            Value::Instance { ref fields, ref methods, ref parent_methods, ref class_name } => {
+                // Fields (stored callables) take priority
+                if let Some(func) = fields.borrow().get(method).cloned() {
+                    return self.call_value_kw(&func, arg_vals, kw_vals);
+                }
+                // Own class method: prepend self, expose super
+                if let Some(func) = methods.get(method).cloned() {
+                    let mut call_args = vec![obj.clone()];
+                    call_args.extend(arg_vals);
+                    // Build kwargs with super if parent exists
+                    let mut extra_kw = kw_vals;
+                    if let Some(pm) = parent_methods {
+                        // Set super as a Value::Class so super.method() works
+                        let super_class = Value::Class {
+                            name: format!("super({})", class_name),
+                            methods: pm.clone(),
+                            parent: None,
+                        };
+                        extra_kw.insert("__super__".to_string(), super_class);
+                    }
+                    return self.call_fn_with_super(&func, call_args, extra_kw);
+                }
+                panic!("[line {}] '{}' has no method '{}'", self.current_line, obj, method)
+            }
+            // Calling a method on a Class directly (static call or super.method)
+            Value::Class { ref methods, .. } => {
+                let static_key = format!("static::{}", method);
+                let func = methods.get(&static_key).or_else(|| methods.get(method)).cloned();
+                if let Some(func) = func {
+                    return self.call_value_kw(&func, arg_vals, kw_vals);
+                }
+                panic!("[line {}] Class has no method '{}'", self.current_line, method)
+            }
+            _ => panic!("[line {}] Cannot call method '{}' on {:?}", self.current_line, method, obj),
+        }
+    }
+
+    fn call_fn_with_super(&mut self, func: &Value, args: Vec<Value>, extras: HashMap<String, Value>) -> Value {
+        if let Value::Fn { params, body, closure } = func.clone() {
+            self.push_scope();
+            for (k, v) in closure { self.set(k, v); }
+            // Install super if present
+            if let Some(super_val) = extras.get("__super__") {
+                self.set("super".to_string(), super_val.clone());
+            }
+            self.set("result".to_string(), Value::Nil);
+            let mut arg_idx = 0;
+            for (p, default) in &params {
+                if let Some(vname) = p.strip_prefix('*') {
+                    let rest = args[arg_idx..].to_vec();
+                    self.set(vname.to_string(), make_list(rest));
+                    break;
+                }
+                let v = if arg_idx < args.len() {
+                    let v = args[arg_idx].clone(); arg_idx += 1; v
+                } else {
+                    default.clone().unwrap_or_else(|| panic!("[line {}] Missing argument '{}'", self.current_line, p))
+                };
+                self.set(p.clone(), v);
+            }
+            let sig = self.exec(&body);
+            let implicit = self.get("result");
+            self.pop_scope();
+            match sig {
+                Some(Signal::Return(v)) => v,
+                None => implicit,
+                _ => Value::Nil,
+            }
+        } else {
+            self.call_value_kw(func, args, extras)
         }
     }
 
@@ -633,8 +794,9 @@ impl Interpreter {
                 (Value::Str(a), Value::Str(b)) => Value::Bool(a >= b),
                 _ => Value::Bool(to_num(&l) >= to_num(&r)),
             },
-            BinOpKind::And   => Value::Bool(is_truthy(&l) && is_truthy(&r)),
-            BinOpKind::Or    => Value::Bool(is_truthy(&l) || is_truthy(&r)),
+            BinOpKind::And          => Value::Bool(is_truthy(&l) && is_truthy(&r)),
+            BinOpKind::Or           => Value::Bool(is_truthy(&l) || is_truthy(&r)),
+            BinOpKind::NullCoalesce => if matches!(l, Value::Nil) { r } else { l },
             BinOpKind::In => match &r {
                 Value::List(lst) => Value::Bool(lst.borrow().iter().any(|v| values_eq(v, &l))),
                 Value::Str(s) => { let sub = l.to_string(); Value::Bool(s.contains(sub.as_str())) }
@@ -652,23 +814,43 @@ impl Interpreter {
 
     // ── User function call ────────────────────────────────────────────────────
 
-    fn call_fn(&mut self, params: Vec<(String, Option<Value>)>, body: Vec<Stmt>, args: Vec<Value>) -> Value {
+    fn call_fn(&mut self, params: Vec<(String, Option<Value>)>, body: Vec<Stmt>,
+               args: Vec<Value>, kwargs: HashMap<String, Value>,
+               closure: HashMap<String, Value>) -> Value {
         self.push_scope();
-        self.set("result".to_string(), Value::Nil); // implicit return variable
-        for (i, (p, default)) in params.iter().enumerate() {
-            let v = args.get(i).cloned()
-                .or_else(|| default.clone())
-                .unwrap_or_else(|| panic!("Missing argument '{}'", p));
+        // Install closure vars first (params will override if same name)
+        for (k, v) in closure {
+            self.set(k, v);
+        }
+        self.set("result".to_string(), Value::Nil);
+        let mut arg_idx = 0;
+        for (p, default) in &params {
+            if let Some(vname) = p.strip_prefix('*') {
+                // *args: collect all remaining positional args
+                let rest: Vec<Value> = args[arg_idx..].to_vec();
+                self.set(vname.to_string(), make_list(rest));
+                arg_idx = args.len();
+                break;
+            }
+            let v = if let Some(kv) = kwargs.get(p) {
+                kv.clone()
+            } else if arg_idx < args.len() {
+                let v = args[arg_idx].clone();
+                arg_idx += 1;
+                v
+            } else {
+                default.clone().unwrap_or_else(|| panic!("[line {}] Missing argument '{}'", self.current_line, p))
+            };
             self.set(p.clone(), v);
         }
         let sig = self.exec(&body);
-        let implicit = self.get("result"); // read before pop
+        let implicit = self.get("result");
         self.pop_scope();
         match sig {
             Some(Signal::Return(v)) => v,
             None                   => implicit,
-            Some(Signal::Break)    => panic!("'break' used outside a loop"),
-            Some(Signal::Continue) => panic!("'continue' used outside a loop"),
+            Some(Signal::Break)    => panic!("[line {}] 'break' outside loop", self.current_line),
+            Some(Signal::Continue) => panic!("[line {}] 'continue' outside loop", self.current_line),
         }
     }
 
@@ -677,35 +859,74 @@ impl Interpreter {
         self.call_value(&func, args)
     }
 
+    fn call_user_kw(&mut self, name: &str, args: Vec<Value>, kwargs: HashMap<String, Value>) -> Value {
+        let func = self.get(name);
+        self.call_value_kw(&func, args, kwargs)
+    }
+
     fn call_value(&mut self, func: &Value, args: Vec<Value>) -> Value {
+        self.call_value_kw(func, args, HashMap::new())
+    }
+
+    fn call_value_kw(&mut self, func: &Value, args: Vec<Value>, kwargs: HashMap<String, Value>) -> Value {
         match func.clone() {
-            Value::Fn { params, body } => self.call_fn(params, body, args),
-            Value::Class { name: class_name, methods } => {
+            Value::Fn { params, body, closure } => self.call_fn(params, body, args, kwargs, closure),
+            Value::Class { name: class_name, methods, parent } => {
+                // Look up parent methods for super
+                let parent_methods = parent.as_ref().and_then(|pname| {
+                    for scope in self.scopes.iter().rev() {
+                        if let Some(Value::Class { methods: pm, .. }) = scope.get(pname) {
+                            return Some(pm.clone());
+                        }
+                    }
+                    None
+                });
                 let instance = Value::Instance {
                     class_name: class_name.clone(),
                     fields: Rc::new(RefCell::new(HashMap::new())),
                     methods: methods.clone(),
+                    parent_methods: parent_methods.clone(),
                 };
                 if let Some(init_fn) = methods.get("init") {
+                    let init_fn = init_fn.clone();
                     let mut call_args = vec![instance.clone()];
                     call_args.extend(args);
-                    self.call_value(init_fn, call_args);
+                    let mut extras = kwargs;
+                    if let Some(pm) = &parent_methods {
+                        extras.insert("__super__".to_string(), Value::Class {
+                            name: format!("super({})", class_name),
+                            methods: pm.clone(),
+                            parent: None,
+                        });
+                    }
+                    self.call_fn_with_super(&init_fn, call_args, extras);
                 }
                 instance
             }
-            _ => panic!("Value is not callable"),
+            _ => panic!("[line {}] Value is not callable", self.current_line),
         }
     }
 
     // ── Built-in functions ────────────────────────────────────────────────────
     // Returns Ok(Value) if handled, Err(args) to fall through to user fn.
 
-    fn call_builtin(&mut self, name: &str, args: Vec<Value>) -> Result<Value, Vec<Value>> {
+    // Convert value to string, honouring __str__ if defined on instances
+    fn to_display(&mut self, v: &Value) -> String {
+        if let Value::Instance { ref methods, .. } = v {
+            if let Some(func) = methods.get("__str__").cloned() {
+                let result = self.call_value(&func, vec![v.clone()]);
+                return result.to_string();
+            }
+        }
+        v.to_string()
+    }
+
+    fn call_builtin(&mut self, name: &str, args: Vec<Value>, kwargs: &HashMap<String, Value>) -> Result<Value, Vec<Value>> {
         let v = match name {
 
             // ── I/O ─────────────────────────────────────────────────────────
             "print" | "p" => {
-                let parts: Vec<String> = args.iter().map(|v| v.to_string()).collect();
+                let parts: Vec<String> = args.iter().map(|v| self.to_display(v)).collect();
                 piper_print!(parts.join(" "));
                 Value::Nil
             }
@@ -726,7 +947,10 @@ impl Interpreter {
             }
 
             // ── Type conversion ──────────────────────────────────────────────
-            "str"   => Value::Str(args.first().map(|v| v.to_string()).unwrap_or_default()),
+            "str"   => {
+                let s = args.first().map(|v| self.to_display(v)).unwrap_or_default();
+                Value::Str(s)
+            }
             "int"   => Value::Number(args.first().map(|v| to_num(v).floor()).unwrap_or(0.0)),
             "float" => Value::Number(args.first().map(|v| to_num(v)).unwrap_or(0.0)),
             "bool"  => Value::Bool(args.first().map(|v| is_truthy(v)).unwrap_or(false)),
@@ -1069,10 +1293,27 @@ impl Interpreter {
                 } else { Value::Nil }
             }
             "sort" => {
+                let key_fn = args.get(1).cloned().or_else(|| kwargs.get("key").cloned());
                 if let Some(Value::List(l)) = args.first() {
                     let mut items = l.borrow().clone();
-                    items.sort_by(|a, b| to_num(a).partial_cmp(&to_num(b)).unwrap_or(std::cmp::Ordering::Equal));
-                    make_list(items)
+                    if let Some(kf) = key_fn {
+                        let mut keyed: Vec<(Value, Value)> = items.iter()
+                            .map(|v| (self.call_value(&kf, vec![v.clone()]), v.clone()))
+                            .collect();
+                        keyed.sort_by(|a, b| {
+                            match (&a.0, &b.0) {
+                                (Value::Str(x), Value::Str(y)) => x.cmp(y),
+                                _ => to_num(&a.0).partial_cmp(&to_num(&b.0)).unwrap_or(std::cmp::Ordering::Equal),
+                            }
+                        });
+                        make_list(keyed.into_iter().map(|(_, v)| v).collect())
+                    } else {
+                        items.sort_by(|a, b| match (a, b) {
+                            (Value::Str(x), Value::Str(y)) => x.cmp(y),
+                            _ => to_num(a).partial_cmp(&to_num(b)).unwrap_or(std::cmp::Ordering::Equal),
+                        });
+                        make_list(items)
+                    }
                 } else { Value::Nil }
             }
             "reverse" => {
@@ -1533,8 +1774,9 @@ impl Interpreter {
                 match (args.get(0), args.get(1)) {
                     (Some(Value::List(_)), Some(Value::List(_))) => {
                         let call_args = vec![args[0].clone(), args[1].clone()];
-                        let p = if let Ok(Value::Number(x)) = self.call_builtin("precision", call_args.clone()) { x } else { 0.0 };
-                        let r = if let Ok(Value::Number(x)) = self.call_builtin("recall", call_args) { x } else { 0.0 };
+                        let empty_kw = HashMap::new();
+                        let p = if let Ok(Value::Number(x)) = self.call_builtin("precision", call_args.clone(), &empty_kw) { x } else { 0.0 };
+                        let r = if let Ok(Value::Number(x)) = self.call_builtin("recall", call_args, &empty_kw) { x } else { 0.0 };
                         Value::Number(2.0 * p * r / (p + r).max(1e-10))
                     }
                     _ => panic!("f1_score(predictions, targets)"),
