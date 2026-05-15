@@ -177,6 +177,7 @@
   <button class="example-btn" onclick="loadExample('class')">Classes</button>
   <button class="example-btn" onclick="loadExample('list')">List Ops</button>
   <button class="example-btn" onclick="loadExample('pipe')">Pipe |></button>
+  <button class="example-btn" onclick="loadExample('lambda')">Lambdas</button>
   <button class="example-btn" onclick="loadExample('messaging')">Messaging App</button>
 </div>
 
@@ -282,6 +283,27 @@ print("Sum via pipe: " + str(result))
 let data = [5, 2, 8, 1, 9, 3]
 let sorted = data |> sort |> reverse
 print("Sorted desc: " + str(sorted))`,
+
+    lambda: `# Lambda / anonymous functions
+fn apply(f, x): return f(x)
+
+let double = fn(x) => x * 2
+let square = fn(x) => x * x
+
+print("double(5) =", str(double(5)))
+print("square(4) =", str(square(4)))
+print("apply(double, 7) =", str(apply(double, 7)))
+
+# Use lambdas with map, filter, reduce
+let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+let evens  = filter(nums, fn(x) => x % 2 == 0)
+let squares = map(evens, fn(x) => x * x)
+print("Even squares:", str(squares))
+
+# Slice with step
+let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+print("Every other:", str(data[::2]))
+print("Reversed:   ", str(data[::-1]))`,
 
     messaging: `# PiperChat — Messaging App Demo
 class Message:

@@ -27,6 +27,7 @@ pub enum Token {
     Assign,
     Pipe,
     DotDot,
+    Arrow,   // =>  (lambda)
 
     // Punctuation
     LParen, RParen,
@@ -35,19 +36,25 @@ pub enum Token {
     Comma, Colon, Dot,
 
     // Layout
-    Newline, Indent, Dedent, EOF,
+    Newline, Indent, Dedent,
+    Line(usize),  // source line number marker
+    EOF,
 }
 
 pub fn tokenize(source: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut indent_stack: Vec<usize> = vec![0];
     let mut bracket_depth: usize = 0;
+    let mut line_num: usize = 0;
 
     for line in source.lines() {
         let trimmed = line.trim_start();
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
+
+        line_num += 1;
+        tokens.push(Token::Line(line_num));
 
         if bracket_depth == 0 {
             let indent = line.len() - trimmed.len();
@@ -100,7 +107,7 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
                 if i + 1 < chars.len() && chars[i+1] == '.' { tokens.push(Token::DotDot); i += 2; }
                 else { tokens.push(Token::Dot); i += 1; }
             }
-            ';' => { i += 1; } // semicolons are optional statement terminators
+            ';' => { i += 1; }
 
             '+' => {
                 if i + 1 < chars.len() && chars[i+1] == '=' { tokens.push(Token::PlusAssign); i += 2; }
@@ -126,6 +133,7 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
             }
             '=' => {
                 if i + 1 < chars.len() && chars[i+1] == '=' { tokens.push(Token::Eq); i += 2; }
+                else if i + 1 < chars.len() && chars[i+1] == '>' { tokens.push(Token::Arrow); i += 2; }
                 else { tokens.push(Token::Assign); i += 1; }
             }
             '!' => {
@@ -155,7 +163,6 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
                 while i < chars.len() {
                     if chars[i].is_ascii_digit() { i += 1; }
                     else if chars[i] == '.' {
-                        // Stop at '..' (range operator), only consume '.' if followed by a digit
                         if i + 1 < chars.len() && chars[i+1] == '.' { break; }
                         if i + 1 < chars.len() && chars[i+1].is_ascii_digit() { i += 1; }
                         else { break; }
@@ -166,7 +173,6 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
             }
 
             c if c.is_alphabetic() || c == '_' => {
-                // f-string: f" or f'
                 if c == 'f' && i + 1 < chars.len() && (chars[i+1] == '"' || chars[i+1] == '\'') {
                     let quote = chars[i+1];
                     i += 2;
@@ -180,13 +186,12 @@ fn tokenize_line(line: &str, tokens: &mut Vec<Token>, bracket_depth: &mut usize)
                     while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '_') { i += 1; }
                     let word: String = chars[start..i].iter().collect();
 
-                    // p(...) shorthand: read raw unquoted text inside parens
                     if word == "p" && i < chars.len() && chars[i] == '(' {
-                        i += 1; // skip '('
+                        i += 1;
                         let raw_start = i;
                         while i < chars.len() && chars[i] != ')' { i += 1; }
                         let raw: String = chars[raw_start..i].iter().collect();
-                        if i < chars.len() { i += 1; } // skip ')'
+                        if i < chars.len() { i += 1; }
                         tokens.push(Token::Ident("p".to_string()));
                         tokens.push(Token::LParen);
                         tokens.push(Token::Str(raw.trim().to_string()));

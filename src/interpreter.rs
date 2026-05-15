@@ -145,7 +145,12 @@ fn values_eq(a: &Value, b: &Value) -> bool {
         (Value::Str(x),    Value::Str(y))    => x == y,
         (Value::Bool(x),   Value::Bool(y))   => x == y,
         (Value::Nil,       Value::Nil)        => true,
-        (Value::Instance { fields: fa, .. }, Value::Instance { fields: fb, .. }) => Rc::ptr_eq(fa, fb),
+        (Value::Instance { fields: fa, class_name: ca, .. }, Value::Instance { fields: fb, class_name: cb, .. }) => {
+            if ca != cb { return false; }
+            let fa = fa.borrow(); let fb = fb.borrow();
+            if fa.len() != fb.len() { return false; }
+            fa.iter().all(|(k, v)| fb.get(k).map(|w| values_eq(v, w)).unwrap_or(false))
+        }
         _ => false,
     }
 }
@@ -178,18 +183,19 @@ fn format_val(v: &Value, spec: &str) -> String {
 
 pub struct Interpreter {
     scopes: Vec<HashMap<String, Value>>,
+    current_line: usize,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter { scopes: vec![HashMap::new()] }
+        Interpreter { scopes: vec![HashMap::new()], current_line: 0 }
     }
 
     fn get(&self, name: &str) -> Value {
         for scope in self.scopes.iter().rev() {
             if let Some(v) = scope.get(name) { return v.clone(); }
         }
-        panic!("Undefined variable: '{}'", name)
+        panic!("[line {}] Undefined variable: '{}'", self.current_line, name)
     }
 
     fn set(&mut self, name: String, value: Value) {
@@ -215,6 +221,8 @@ impl Interpreter {
 
     fn exec_stmt(&mut self, stmt: &Stmt) -> Option<Signal> {
         match stmt {
+            Stmt::Mark(n) => { self.current_line = *n; None }
+
             Stmt::Let { name, value } => {
                 let v = self.eval(value);
                 self.set(name.clone(), v);
@@ -452,29 +460,60 @@ impl Interpreter {
                 }
             }
 
-            Expr::Slice { object, start, end } => {
+            Expr::Lambda { params, body } => {
+                let resolved: Vec<(String, Option<Value>)> = params.iter()
+                    .map(|p| (p.clone(), None))
+                    .collect();
+                Value::Fn { params: resolved, body: vec![Stmt::Return((**body).clone())] }
+            }
+
+            Expr::Slice { object, start, end, step } => {
+                fn resolve_idx(n: f64, len: usize) -> isize {
+                    if n < 0.0 { (len as isize + n as isize).max(0) } else { (n as isize).min(len as isize) }
+                }
                 let obj = self.eval(object);
                 let start_val = start.as_ref().map(|e| to_num(&self.eval(e)));
                 let end_val   = end.as_ref().map(|e| to_num(&self.eval(e)));
-                let resolve = |n: f64, len: usize| -> usize {
-                    if n < 0.0 { (len as i64 + n as i64).max(0) as usize } else { (n as usize).min(len) }
-                };
+                let step_n    = step.as_ref().map(|e| to_num(&self.eval(e))).unwrap_or(1.0) as isize;
+                if step_n == 0 { panic!("[line {}] Slice step cannot be zero", self.current_line); }
                 match obj {
                     Value::List(l) => {
                         let items = l.borrow().clone();
                         let len = items.len();
-                        let lo = start_val.map(|n| resolve(n, len)).unwrap_or(0);
-                        let hi = end_val.map(|n| resolve(n, len)).unwrap_or(len).max(lo);
-                        make_list(items[lo..hi].to_vec())
+                        let (lo, hi): (isize, isize) = if step_n > 0 {
+                            (start_val.map(|n| resolve_idx(n, len)).unwrap_or(0),
+                             end_val.map(|n| resolve_idx(n, len)).unwrap_or(len as isize))
+                        } else {
+                            (start_val.map(|n| resolve_idx(n, len)).unwrap_or(len as isize - 1),
+                             end_val.map(|n| resolve_idx(n, len)).unwrap_or(-1))
+                        };
+                        let mut result = Vec::new();
+                        let mut i = lo;
+                        while if step_n > 0 { i < hi } else { i > hi } {
+                            if i >= 0 && (i as usize) < len { result.push(items[i as usize].clone()); }
+                            i += step_n;
+                        }
+                        make_list(result)
                     }
                     Value::Str(s) => {
                         let chars: Vec<char> = s.chars().collect();
                         let len = chars.len();
-                        let lo = start_val.map(|n| resolve(n, len)).unwrap_or(0);
-                        let hi = end_val.map(|n| resolve(n, len)).unwrap_or(len).max(lo);
-                        Value::Str(chars[lo..hi].iter().collect())
+                        let (lo, hi): (isize, isize) = if step_n > 0 {
+                            (start_val.map(|n| resolve_idx(n, len)).unwrap_or(0),
+                             end_val.map(|n| resolve_idx(n, len)).unwrap_or(len as isize))
+                        } else {
+                            (start_val.map(|n| resolve_idx(n, len)).unwrap_or(len as isize - 1),
+                             end_val.map(|n| resolve_idx(n, len)).unwrap_or(-1))
+                        };
+                        let mut result = String::new();
+                        let mut i = lo;
+                        while if step_n > 0 { i < hi } else { i > hi } {
+                            if i >= 0 && (i as usize) < len { result.push(chars[i as usize]); }
+                            i += step_n;
+                        }
+                        Value::Str(result)
                     }
-                    _ => panic!("Cannot slice {}", obj),
+                    _ => panic!("[line {}] Cannot slice {}", self.current_line, obj),
                 }
             }
 
@@ -578,10 +617,22 @@ impl Interpreter {
             BinOpKind::Pow  => Value::Number(to_num(&l).powf(to_num(&r))),
             BinOpKind::Eq    => Value::Bool(values_eq(&l, &r)),
             BinOpKind::NotEq => Value::Bool(!values_eq(&l, &r)),
-            BinOpKind::Lt    => Value::Bool(to_num(&l) <  to_num(&r)),
-            BinOpKind::Gt    => Value::Bool(to_num(&l) >  to_num(&r)),
-            BinOpKind::LtEq  => Value::Bool(to_num(&l) <= to_num(&r)),
-            BinOpKind::GtEq  => Value::Bool(to_num(&l) >= to_num(&r)),
+            BinOpKind::Lt   => match (&l, &r) {
+                (Value::Str(a), Value::Str(b)) => Value::Bool(a < b),
+                _ => Value::Bool(to_num(&l) < to_num(&r)),
+            },
+            BinOpKind::Gt   => match (&l, &r) {
+                (Value::Str(a), Value::Str(b)) => Value::Bool(a > b),
+                _ => Value::Bool(to_num(&l) > to_num(&r)),
+            },
+            BinOpKind::LtEq => match (&l, &r) {
+                (Value::Str(a), Value::Str(b)) => Value::Bool(a <= b),
+                _ => Value::Bool(to_num(&l) <= to_num(&r)),
+            },
+            BinOpKind::GtEq => match (&l, &r) {
+                (Value::Str(a), Value::Str(b)) => Value::Bool(a >= b),
+                _ => Value::Bool(to_num(&l) >= to_num(&r)),
+            },
             BinOpKind::And   => Value::Bool(is_truthy(&l) && is_truthy(&r)),
             BinOpKind::Or    => Value::Bool(is_truthy(&l) || is_truthy(&r)),
             BinOpKind::In => match &r {
@@ -1480,12 +1531,10 @@ impl Interpreter {
             }
             "f1_score" => {
                 match (args.get(0), args.get(1)) {
-                    (Some(Value::List(pred)), Some(Value::List(true_v))) => {
-                        let p_args = vec![args[0].clone(), args[1].clone()];
-                        let t_args = vec![args[0].clone(), args[1].clone()];
-                        let p = if let Ok(Value::Number(x)) = self.call_builtin("precision", p_args) { x } else { 0.0 };
-                        let r = if let Ok(Value::Number(x)) = self.call_builtin("recall", t_args) { x } else { 0.0 };
-                        let _ = pred; let _ = true_v;
+                    (Some(Value::List(_)), Some(Value::List(_))) => {
+                        let call_args = vec![args[0].clone(), args[1].clone()];
+                        let p = if let Ok(Value::Number(x)) = self.call_builtin("precision", call_args.clone()) { x } else { 0.0 };
+                        let r = if let Ok(Value::Number(x)) = self.call_builtin("recall", call_args) { x } else { 0.0 };
                         Value::Number(2.0 * p * r / (p + r).max(1e-10))
                     }
                     _ => panic!("f1_score(predictions, targets)"),
