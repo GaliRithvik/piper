@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::cell::Cell;
@@ -170,6 +171,75 @@ fn make_dict(pairs: Vec<(String, Value)>) -> Value {
     Value::Dict(Rc::new(RefCell::new(pairs.into_iter().collect())))
 }
 
+/// Fast pseudo-random index for fake data generators (not crypto-safe).
+fn pseudo_rand() -> usize {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let t = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .subsec_nanos() as usize;
+    t.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407)
+}
+
+/// Approximate UTC timestamp string — no external crates needed.
+pub fn sys_now() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let total = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let tod  = total % 86400;
+    let h = tod / 3600; let m = (tod % 3600) / 60; let s = tod % 60;
+    let days = total / 86400;
+    // Simplified Gregorian (close enough for threat logs)
+    let y400 = days / 146097; let d1 = days % 146097;
+    let y100 = (d1 / 36524).min(3); let d2 = d1 - y100 * 36524;
+    let y4   = d2 / 1461;           let d3 = d2 % 1461;
+    let y1   = (d3 / 365).min(3);
+    let year = y400 * 400 + y100 * 100 + y4 * 4 + y1 + 1970;
+    let doy  = d3 - y1 * 365;
+    let is_leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    let mdays: [u64; 12] = if is_leap { [31,29,31,30,31,30,31,31,30,31,30,31] }
+                           else        { [31,28,31,30,31,30,31,31,30,31,30,31] };
+    let mut mo = 1u64; let mut rem = doy;
+    for (i, &md) in mdays.iter().enumerate() {
+        if rem < md { mo = i as u64 + 1; break; }
+        rem -= md;
+    }
+    format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC", year, mo, rem + 1, h, m, s)
+}
+
+/// Heuristic bot score 0–100. >= 50 → treat as bot.
+pub fn compute_bot_score(req: &Value) -> u32 {
+    let headers: HashMap<String, String> = match req {
+        Value::Dict(d) => match d.borrow().get("headers") {
+            Some(Value::Dict(h)) => h.borrow().iter()
+                .map(|(k, v)| (k.clone(), v.to_string()))
+                .collect(),
+            _ => HashMap::new(),
+        },
+        _ => return 60,
+    };
+    let mut score: u32 = 0;
+    let ua = headers.get("user-agent").map(|s| s.to_lowercase());
+    match &ua {
+        None => score += 45,
+        Some(ua) => {
+            let sigs = ["python-requests","python-urllib","curl/","wget/","scrapy",
+                        "playwright","puppeteer","selenium","headless","phantomjs",
+                        "httpclient","okhttp","go-http-client","node-fetch","axios",
+                        "libwww-perl","java/","jakarta","pycurl","claudebot","gptbot",
+                        "anthropic","openai","bingbot","googlebot","crawl","spider"];
+            if sigs.iter().any(|s| ua.contains(s)) { score += 40; }
+        }
+    }
+    if !headers.contains_key("accept-language") { score += 25; }
+    if !headers.contains_key("accept")          { score += 15; }
+    if !headers.contains_key("referer")         { score += 10; }
+    if !headers.contains_key("connection")      { score +=  5; }
+    score.min(100)
+}
+
 fn format_val(v: &Value, spec: &str) -> String {
     let n = to_num(v);
     if let Some(inner) = spec.strip_prefix('.') {
@@ -191,11 +261,30 @@ fn format_val(v: &Value, spec: &str) -> String {
 pub struct Interpreter {
     scopes: Vec<HashMap<String, Value>>,
     current_line: usize,
+    // HTTP server / deception state
+    pub routes:            Vec<(String, Value)>,
+    pub honeypots:         Vec<(String, Value)>,
+    pub blocked_ips:       HashSet<String>,
+    pub threat_log:        Vec<String>,
+    pub canary_callbacks:  Vec<(String, Value)>,
+    // Set by serve() — main.rs reads this to actually start the server
+    pub server_host: Option<String>,
+    pub server_port: u16,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter { scopes: vec![HashMap::new()], current_line: 0 }
+        Interpreter {
+            scopes: vec![HashMap::new()],
+            current_line: 0,
+            routes:           Vec::new(),
+            honeypots:        Vec::new(),
+            blocked_ips:      HashSet::new(),
+            threat_log:       Vec::new(),
+            canary_callbacks: Vec::new(),
+            server_host:      None,
+            server_port:      8080,
+        }
     }
 
     fn get(&self, name: &str) -> Value {
@@ -864,7 +953,7 @@ impl Interpreter {
         self.call_value_kw(&func, args, kwargs)
     }
 
-    fn call_value(&mut self, func: &Value, args: Vec<Value>) -> Value {
+    pub fn call_value(&mut self, func: &Value, args: Vec<Value>) -> Value {
         self.call_value_kw(func, args, HashMap::new())
     }
 
@@ -1846,6 +1935,255 @@ impl Interpreter {
                     piper_print!(format!("{:>width$} └{}", "", "─".repeat(bar_width + 5), width = label_w));
                     Value::Nil
                 } else { panic!("bar_chart(data, labels)") }
+            }
+
+            // ── HTTP Server & Deception Layer ─────────────────────────────────
+
+            // Register a normal route:  route("/path", fn(req) => ...)
+            "route" => {
+                let path = match args.first() { Some(Value::Str(s)) => s.clone(), _ => panic!("route(path, handler)") };
+                let func = args.into_iter().nth(1).unwrap_or(Value::Nil);
+                self.routes.push((path, func));
+                Value::Nil
+            }
+
+            // Register a honeypot:  honeypot("/admin/*", fn(req) => ...)
+            "honeypot" => {
+                let path = match args.first() { Some(Value::Str(s)) => s.clone(), _ => panic!("honeypot(path, handler)") };
+                let func = args.into_iter().nth(1).unwrap_or(Value::Nil);
+                self.honeypots.push((path, func));
+                Value::Nil
+            }
+
+            // serve("0.0.0.0", 8080) — registers host/port; main.rs actually starts the loop
+            "serve" => {
+                let host = match args.first() { Some(Value::Str(s)) => s.clone(), _ => "0.0.0.0".to_string() };
+                let port = match args.get(1)  { Some(Value::Number(n)) => *n as u16, _ => 8080 };
+                self.server_host = Some(host);
+                self.server_port = port;
+                Value::Nil
+            }
+
+            // Heuristic bot check:  if is_bot(req): ...
+            "is_bot" => {
+                Value::Bool(compute_bot_score(args.first().unwrap_or(&Value::Nil)) >= 50)
+            }
+
+            // Numeric bot confidence 0-100:  let s = bot_score(req)
+            "bot_score" => {
+                Value::Number(compute_bot_score(args.first().unwrap_or(&Value::Nil)) as f64)
+            }
+
+            // Deliberate delay — drains bot resources:  tarpit(30)
+            "tarpit" => {
+                let secs = match args.first() { Some(Value::Number(n)) => *n, _ => 5.0 };
+                #[cfg(not(target_arch = "wasm32"))]
+                std::thread::sleep(std::time::Duration::from_secs_f64(secs));
+                Value::Nil
+            }
+
+            // Add IP to blocklist:  block_ip(req["ip"])
+            "block_ip" => {
+                if let Some(Value::Str(ip)) = args.first() {
+                    println!("  [BLOCK] {}", ip);
+                    self.blocked_ips.insert(ip.clone());
+                }
+                Value::Nil
+            }
+
+            // Unblock an IP:  unblock_ip(ip)
+            "unblock_ip" => {
+                if let Some(Value::Str(ip)) = args.first() {
+                    self.blocked_ips.remove(ip);
+                }
+                Value::Nil
+            }
+
+            // Log a threat entry:  log_threat(req, "reason")
+            "log_threat" => {
+                let ts  = sys_now();
+                let ip  = match args.first() {
+                    Some(Value::Dict(d)) => d.borrow().get("ip").map(|v| v.to_string()).unwrap_or_default(),
+                    Some(Value::Str(s))  => s.clone(),
+                    _                    => "unknown".to_string(),
+                };
+                let reason = match args.get(1) { Some(Value::Str(s)) => s.clone(), _ => "manual".to_string() };
+                let entry  = format!("[{}] THREAT  ip={}  reason={}", ts, ip, reason);
+                println!("  ⚠  {}", entry);
+                self.threat_log.push(entry);
+                Value::Nil
+            }
+
+            // Return accumulated threat log as a list of strings
+            "get_threats" => {
+                make_list(self.threat_log.iter().map(|s| Value::Str(s.clone())).collect())
+            }
+
+            // Return set of currently blocked IPs as a list
+            "get_blocked" => {
+                make_list(self.blocked_ips.iter().map(|s| Value::Str(s.clone())).collect())
+            }
+
+            // Register a canary token + alert callback:
+            //   canary_token("SECRET_KEY_XYZ", fn(ip) => block_ip(ip))
+            "canary_token" => {
+                let token = match args.first() { Some(Value::Str(s)) => s.clone(), _ => panic!("canary_token(token, callback)") };
+                let cb    = args.into_iter().nth(1).unwrap_or(Value::Nil);
+                println!("  [CANARY] registered: {}...", &token[..token.len().min(16)]);
+                self.canary_callbacks.push((token.clone(), cb));
+                Value::Str(token)
+            }
+
+            // Build a response with explicit HTTP status:
+            //   return response(401, {"error": "unauthorized"})
+            "response" => {
+                let status = match args.first() { Some(Value::Number(n)) => *n, _ => 200.0 };
+                let body   = args.into_iter().nth(1).unwrap_or(Value::Nil);
+                make_dict(vec![
+                    ("__status__".to_string(), Value::Number(status)),
+                    ("__body__".to_string(),   body),
+                ])
+            }
+
+            // ── Fake data generators ───────────────────────────────────────────
+
+            // Realistic-looking fake bank account dict
+            "fake_account" => {
+                let idx   = pseudo_rand();
+                let names = ["James Morrison","Sarah Chen","Marcus Williams","Elena Rodriguez",
+                             "David Kim","Priya Patel","Thomas Anderson","Lisa Thompson",
+                             "Robert Jackson","Aisha Okonkwo","Michael Zhang","Emma Davis"];
+                let types = ["checking","savings","investment","money_market","current"];
+                let curs  = ["USD","EUR","GBP","CHF","CAD","AUD","SGD","JPY"];
+                let name  = names[idx % names.len()];
+                let cur   = curs[idx % curs.len()];
+                let acct  = format!("ACC-{}", 1_000_000 + idx.wrapping_mul(7919) % 9_000_000);
+                let iban  = format!("GB{:02}NWBK{:012}",
+                    idx.wrapping_mul(37).wrapping_add(11) % 100,
+                    idx.wrapping_mul(1_000_003).wrapping_add(876_543) % 1_000_000_000_000);
+                let bal   = (idx.wrapping_mul(1_234_567).wrapping_add(10_000) % 2_000_000) as f64 / 100.0;
+                make_dict(vec![
+                    ("account_id".into(),   Value::Str(acct)),
+                    ("holder".into(),       Value::Str(name.into())),
+                    ("iban".into(),         Value::Str(iban)),
+                    ("balance".into(),      Value::Number(bal)),
+                    ("currency".into(),     Value::Str(cur.into())),
+                    ("type".into(),         Value::Str(types[idx % types.len()].into())),
+                    ("status".into(),       Value::Str("active".into())),
+                    ("credit_limit".into(), Value::Number((idx.wrapping_mul(7) % 50 * 1000) as f64)),
+                    ("opened".into(),       Value::Str(format!("20{:02}-{:02}-{:02}", (idx.wrapping_mul(3).wrapping_add(4))%20+4, (idx%12)+1, (idx%28)+1))),
+                ])
+            }
+
+            // List of n fake user records
+            "fake_user_list" => {
+                let n = (match args.first() { Some(Value::Number(n)) => *n as usize, _ => 10 }).min(1000);
+                let first = ["Alice","Bob","Carol","David","Eva","Frank","Grace","Hiro",
+                             "Isla","James","Kira","Liam","Maya","Noah","Olivia","Peter",
+                             "Quinn","Rosa","Sam","Tara","Uma","Victor","Wendy","Xia","Yuki","Zoe"];
+                let last  = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller",
+                             "Davis","Rodriguez","Martinez","Hernandez","Lopez","Wilson",
+                             "Anderson","Taylor","Thomas","Moore","Jackson","Martin","Lee"];
+                let roles = ["user","user","user","user","admin","analyst","support","auditor"];
+                let users: Vec<Value> = (0..n).map(|i| {
+                    let r = pseudo_rand().wrapping_add(i.wrapping_mul(9973));
+                    let fname = first[r % first.len()];
+                    let lname = last[(r / 3) % last.len()];
+                    make_dict(vec![
+                        ("id".into(),      Value::Number((100_000 + i) as f64)),
+                        ("name".into(),    Value::Str(format!("{} {}", fname, lname))),
+                        ("email".into(),   Value::Str(format!("{}.{}{}@example.com", fname.to_lowercase(), lname.to_lowercase(), r % 99))),
+                        ("role".into(),    Value::Str(roles[r % roles.len()].into())),
+                        ("created".into(), Value::Str(format!("20{:02}-{:02}-{:02}", (r%20)+4, (r%12)+1, (r%28)+1))),
+                        ("active".into(),  Value::Bool(r % 10 != 0)),
+                    ])
+                }).collect();
+                make_list(users)
+            }
+
+            // List of n fake bank transactions
+            "fake_transaction" => {
+                let n = (match args.first() { Some(Value::Number(n)) => *n as usize, _ => 10 }).min(500);
+                let merchants = ["Amazon","Netflix","Spotify","Uber","Apple","Walmart","Target",
+                                 "Shell","McDonald's","Starbucks","Airbnb","Delta Airlines",
+                                 "Google","Microsoft","Stripe","PayPal","Steam","Lyft"];
+                let cats      = ["Shopping","Entertainment","Transport","Food","Utilities",
+                                 "Transfer","Healthcare","Subscription","Travel","Groceries"];
+                let statuses  = ["settled","settled","settled","pending","settled","settled"];
+                let txns: Vec<Value> = (0..n).map(|i| {
+                    let r   = pseudo_rand().wrapping_add(i.wrapping_mul(6271));
+                    let amt = -((r % 50_000) as f64) / 100.0;
+                    make_dict(vec![
+                        ("id".into(),        Value::Str(format!("TXN-{}", 1_000_000 + r.wrapping_mul(7) % 9_000_000))),
+                        ("amount".into(),    Value::Number(amt)),
+                        ("currency".into(),  Value::Str("USD".into())),
+                        ("merchant".into(),  Value::Str(merchants[r % merchants.len()].into())),
+                        ("category".into(),  Value::Str(cats[r % cats.len()].into())),
+                        ("status".into(),    Value::Str(statuses[r % statuses.len()].into())),
+                        ("date".into(),      Value::Str(format!("2024-{:02}-{:02}", (r%12)+1, (r%28)+1))),
+                        ("reference".into(), Value::Str(format!("REF{:010}", r.wrapping_mul(1_000_003)))),
+                    ])
+                }).collect();
+                make_list(txns)
+            }
+
+            // Deception maze: deep nested structure to exhaust AI scrapers
+            "deception_maze" => {
+                let r       = pseudo_rand();
+                let page    = match args.first() { Some(Value::Number(n)) => *n as usize, _ => 1 };
+                let per_pag = 50usize;
+                let total   = 250usize;
+
+                let users: Vec<Value> = (0..per_pag).map(|i| {
+                    let ri    = r.wrapping_add(i * 9973 + page * 31337);
+                    let first = ["Alice","Bob","Carol","David","Eva","Frank","Grace","Hiro"][ri % 8];
+                    let last  = ["Smith","Johnson","Williams","Brown","Jones","Garcia"][ri % 6];
+                    let txns: Vec<Value> = (0..5).map(|j| {
+                        let rj = ri.wrapping_add(j * 7919);
+                        make_dict(vec![
+                            ("id".into(),     Value::Str(format!("TXN-{}", rj % 9_999_999))),
+                            ("amount".into(), Value::Number(-((rj % 10_000) as f64) / 100.0)),
+                            ("date".into(),   Value::Str(format!("2024-{:02}-{:02}", (rj%12)+1, (rj%28)+1))),
+                        ])
+                    }).collect();
+                    make_dict(vec![
+                        ("id".into(),    Value::Number((page * per_pag + i) as f64)),
+                        ("name".into(),  Value::Str(format!("{} {}", first, last))),
+                        ("email".into(), Value::Str(format!("{}{}@decoy.internal", first.to_lowercase(), ri % 999))),
+                        ("account".into(), make_dict(vec![
+                            ("number".into(),       Value::Str(format!("DECOY-{:012}", ri.wrapping_mul(1_000_003)))),
+                            ("balance".into(),       Value::Number((ri % 1_000_000) as f64 / 100.0)),
+                            ("transactions".into(),  make_list(txns)),
+                        ])),
+                    ])
+                }).collect();
+
+                let next_url = if page < total {
+                    Value::Str(format!("/api/v2/users?page={}&token=eyJhbGciOiJIUzI1NiJ9.fake.{}", page + 1, r))
+                } else { Value::Nil };
+
+                make_dict(vec![
+                    ("data".into(), make_dict(vec![
+                        ("users".into(), make_list(users)),
+                        ("summary".into(), make_dict(vec![
+                            ("total_users".into(),    Value::Number(12_500_000.0)),
+                            ("total_accounts".into(), Value::Number(37_500_000.0)),
+                            ("total_assets".into(),   Value::Str("$2,847,391,000 USD".into())),
+                        ])),
+                    ])),
+                    ("pagination".into(), make_dict(vec![
+                        ("page".into(),        Value::Number(page as f64)),
+                        ("per_page".into(),    Value::Number(per_pag as f64)),
+                        ("total_pages".into(), Value::Number(total as f64)),
+                        ("next".into(),        next_url),
+                        ("prev".into(),        if page > 1 { Value::Str(format!("/api/v2/users?page={}", page-1)) } else { Value::Nil }),
+                    ])),
+                    ("meta".into(), make_dict(vec![
+                        ("server".into(),     Value::Str("banking-api-v2.internal".into())),
+                        ("generated".into(),  Value::Str(sys_now())),
+                        ("request_id".into(), Value::Str(format!("req_{:08x}", r))),
+                    ])),
+                ])
             }
 
             _ => return Err(args),
