@@ -72,6 +72,8 @@ Then open the folder in VS Code and press **`Cmd+Shift+B`** (Mac) / **`Ctrl+Shif
 - **Tuple unpacking** — `let (loss, acc) = train(X, y)`
 - **`result` implicit return** — set `result = x` instead of `return x`
 - **Short print** — `p(Hello World);` instead of `print("Hello World")`
+- **HTTP server** — `serve("0.0.0.0", 8080)` starts a built-in server; `route()` and `honeypot()` register handlers
+- **Deception layer** — `is_bot`, `tarpit`, `block_ip`, `canary_token`, `fake_account`, `deception_maze` for active defense
 - **Rust-powered** — fast tree-walk interpreter, ~2× faster than CPython for compute-heavy loops
 - **WebAssembly** — runs in the browser, no install required
 
@@ -203,6 +205,10 @@ let C = matmul(A, B)   # [[19, 22], [43, 50]]
 | Lists | `append`, `pop`, `sort`, `reverse`, `slice`, `flatten`, `zip`, `map`, `filter`, `reduce`, `enumerate`, `range` |
 | Strings | `len`, `split`, `join`, `upper`, `lower`, `trim`, `contains`, `replace`, `startswith`, `endswith`, `char` |
 | Dicts | `keys`, `values`, `items`, `has_key`, `get`, `del_key` |
+| HTTP Server | `serve`, `route`, `honeypot`, `response` |
+| Bot Detection | `is_bot`, `bot_score` |
+| Deception | `tarpit`, `block_ip`, `unblock_ip`, `canary_token`, `log_threat`, `get_threats`, `get_blocked` |
+| Fake Data | `fake_account`, `fake_user_list`, `fake_transaction`, `deception_maze` |
 
 ---
 
@@ -210,13 +216,15 @@ let C = matmul(A, B)   # [[19, 22], [43, 50]]
 
 ```
 piper/
-├── Cargo.toml                    # Rust package config (bin + cdylib for WASM)
+├── Cargo.toml                    # Rust package config (bin + cdylib for WASM + tiny_http)
 ├── src/
-│   ├── main.rs                   # CLI entry point + REPL
+│   ├── main.rs                   # CLI entry point + REPL; starts HTTP server if serve() called
 │   ├── lib.rs                    # WASM entry point (wasm-bindgen)
 │   ├── lexer.rs                  # Tokenizer — Token stream with line number markers
 │   ├── parser.rs                 # AST definitions + recursive descent parser
-│   └── interpreter.rs            # Tree-walk interpreter — 90+ built-ins
+│   ├── interpreter.rs            # Tree-walk interpreter — 90+ built-ins + server/deception state
+│   └── server.rs                 # HTTP server (tiny_http) + deception layer — route dispatch,
+│                                 #   bot fingerprinting, canary scanning, JSON serialisation
 │
 ├── docs/                         # GitHub Pages — browser playground
 │   ├── index.html                # Playground UI (editor + output split pane)
@@ -296,6 +304,8 @@ Open the `piper/` folder in VS Code, open any `.piper` file, and press **`Cmd+Sh
 ## Changelog
 
 ### v0.9.0
+- Added **HTTP server** — `serve(host, port)` + `route()` + `honeypot()` built-ins powered by Rust's `tiny_http`
+- Added **deception / anti-bot layer** — `is_bot`, `bot_score`, `tarpit`, `block_ip`, `canary_token`, `log_threat`, `fake_account`, `fake_user_list`, `fake_transaction`, `deception_maze`
 - Added **inheritance** — `class Dog(Animal):` extends a parent class
 - Added **`super`** — call parent methods with `super.method(self, ...)`
 - Added **static methods** — `static fn name():` called on the class directly
