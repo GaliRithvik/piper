@@ -1,6 +1,6 @@
 [package]
 name = "piper"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 description = "Piper — Python-like syntax, Rust-powered interpreter"
 
@@ -17,6 +17,8 @@ path = "src/lib.rs"
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"
 
-# HTTP server — native targets only
+# HTTP server + Ollama client — native targets only
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tiny_http = "0.12"
+ureq = { version = "2.10", features = ["json"] }
+serde_json = "1"

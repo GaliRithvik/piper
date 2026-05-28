@@ -1,0 +1,42 @@
+# =============================================
+#  Piper — Ollama Integration Demo
+#  Requires Ollama running at localhost:11434
+# =============================================
+
+print("=== Piper + Ollama Demo ===")
+print("")
+
+# 1. List available models
+print("--- Available Models ---")
+let models = ollama_models()
+print(f"Models: {models}")
+print("")
+
+# 2. Simple prompt/response
+print("--- Simple Ask ---")
+let answer = ollama_ask("llama3.1:8b", "What is 2 + 2? Answer in one word.")
+print(f"Question: What is 2 + 2?")
+print(f"Answer:   {answer}")
+print("")
+
+# 3. Chat-style messages
+print("--- Chat ---")
+let messages = [
+    {"role": "system", "content": "You are a helpful assistant that replies in one sentence."},
+    {"role": "user",   "content": "What is the capital of France?"}
+]
+let reply = ollama_chat("llama3.1:8b", messages)
+print(f"Reply: {reply}")
+print("")
+
+# 4. Use Ollama inside a Piper function
+fn ask_and_shout(model, prompt):
+    let r = ollama_ask(model, prompt)
+    return r
+
+print("--- Ask & Shout ---")
+let shout = ask_and_shout("llama3.1:8b", "Say hello in one word.")
+print(f"Shout: {shout}")
+print("")
+
+print("=== Done ===")

@@ -2,7 +2,7 @@
 
 Piper is a programming language with Python-like syntax and a Rust backend, designed for AI and machine learning workflows.
 
-![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.9.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![WASM](https://img.shields.io/badge/runs%20in-browser%20(WASM)-purple)
+![Rust](https://img.shields.io/badge/Backend-Rust-orange) ![Version](https://img.shields.io/badge/version-0.9.1-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![WASM](https://img.shields.io/badge/runs%20in-browser%20(WASM)-purple) ![Ollama](https://img.shields.io/badge/Ollama-integrated-black)
 
 🌐 **[Try it in your browser →](https://GaliRithvik.github.io/piper)** — no install needed
 
@@ -74,6 +74,7 @@ Then reload VS Code (`Cmd+Shift+P` → **Reload Window**) and open any `.piper` 
 - **Tuple unpacking** — `let (loss, acc) = train(X, y)`
 - **`result` implicit return** — set `result = x` instead of `return x`
 - **Short print** — `p(Hello World);` instead of `print("Hello World")`
+- **Ollama integration** — `ollama_ask(model, prompt)`, `ollama_chat(model, messages)`, `ollama_models()` call local LLMs directly from Piper code
 - **HTTP server** — `serve("0.0.0.0", 8080)` starts a built-in server; `route()` and `honeypot()` register handlers
 - **Deception layer** — `is_bot`, `tarpit`, `block_ip`, `canary_token`, `fake_account`, `deception_maze` for active defense
 - **Formatter** — `piper fmt file.piper` auto-formats code (spacing, blank lines, indentation)
@@ -213,6 +214,48 @@ let C = matmul(A, B)   # [[19, 22], [43, 50]]
 | Bot Detection | `is_bot`, `bot_score` |
 | Deception | `tarpit`, `block_ip`, `unblock_ip`, `canary_token`, `log_threat`, `get_threats`, `get_blocked` |
 | Fake Data | `fake_account`, `fake_user_list`, `fake_transaction`, `deception_maze` |
+| Ollama (LLM) | `ollama_ask`, `ollama_chat`, `ollama_models` |
+
+---
+
+## Ollama Integration
+
+Run local LLMs (Llama, Mistral, Gemma, etc.) directly from Piper code via [Ollama](https://ollama.com).
+
+> **Requires:** Ollama running at `localhost:11434`
+
+```python
+# List installed models
+let models = ollama_models()
+print(f"Available: {models}")
+
+# Single prompt → response
+let answer = ollama_ask("llama3.1:8b", "What is 2 + 2? One word.")
+print(answer)   # Four.
+
+# Multi-turn chat with a system prompt
+let messages = [
+    {"role": "system", "content": "Reply in one sentence."},
+    {"role": "user",   "content": "What is the capital of France?"}
+]
+let reply = ollama_chat("llama3.1:8b", messages)
+print(reply)    # The capital of France is Paris.
+
+# Use inside any Piper function or pipeline
+fn summarise(text):
+    return ollama_ask("llama3.1:8b", f"Summarise in 10 words: {text}")
+```
+
+| Function | Signature | Returns |
+|---|---|---|
+| `ollama_ask` | `ollama_ask(model, prompt)` | `string` — model's reply |
+| `ollama_chat` | `ollama_chat(model, messages)` | `string` — assistant's last message |
+| `ollama_models` | `ollama_models()` | `list` — names of installed models |
+
+Run the full demo:
+```bash
+cargo run --release -- examples/ollama_demo.piper
+```
 
 ---
 
@@ -220,13 +263,13 @@ let C = matmul(A, B)   # [[19, 22], [43, 50]]
 
 ```
 piper/
-├── Cargo.toml                    # Rust package config (bin + cdylib for WASM + tiny_http)
+├── Cargo.toml                    # Rust package config (bin + cdylib for WASM + tiny_http + ureq + serde_json)
 ├── src/
 │   ├── main.rs                   # CLI entry point + REPL + fmt subcommand
 │   ├── lib.rs                    # WASM entry point (wasm-bindgen)
 │   ├── lexer.rs                  # Tokenizer — Token stream with line number markers
 │   ├── parser.rs                 # AST definitions + recursive descent parser
-│   ├── interpreter.rs            # Tree-walk interpreter — 90+ built-ins + server/deception state
+│   ├── interpreter.rs            # Tree-walk interpreter — 90+ built-ins + Ollama + server/deception state
 │   ├── formatter.rs              # Source formatter — spacing, blank lines, tab normalisation
 │   └── server.rs                 # HTTP server (tiny_http) + deception layer — route dispatch,
 │                                 #   bot fingerprinting, canary scanning, JSON serialisation
@@ -256,6 +299,7 @@ piper/
 │   ├── features_test.piper       # v0.4 features: slicing, negative index, defaults
 │   ├── aiml_builtins_test.piper  # v0.6 AI/ML built-ins
 │   ├── classes_test.piper        # v0.7 class syntax
+│   ├── ollama_demo.piper         # Ollama LLM integration demo
 │   ├── benchmark.piper           # Performance benchmark
 │   ├── benchmark_pure.py         # Pure Python benchmark
 │   ├── benchmark_numpy.py        # NumPy benchmark
@@ -324,6 +368,14 @@ Applies: trailing whitespace removal, tab → 4-space normalisation, blank line 
 ---
 
 ## Changelog
+
+### v0.9.1
+- Added **Ollama integration** — call local LLMs directly from Piper with three new built-ins:
+  - `ollama_ask(model, prompt)` — single prompt, returns string response
+  - `ollama_chat(model, messages)` — multi-turn chat with `[{role, content}, ...]` message list
+  - `ollama_models()` — list all models installed on local Ollama instance
+- Added `ureq` + `serde_json` as native-only dependencies (not compiled to WASM)
+- Added `examples/ollama_demo.piper` — runnable demo showcasing all three Ollama built-ins
 
 ### v0.9.0
 - Added **VS Code extension** (`piper-vscode/`) — syntax highlighting, run shortcut (`Cmd+Shift+R`), format shortcut (`Cmd+Shift+I`), format-on-save option

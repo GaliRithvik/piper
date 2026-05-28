@@ -2186,6 +2186,121 @@ impl Interpreter {
                 ])
             }
 
+            // ── Ollama integration ────────────────────────────────────────────
+            "ollama_ask" => {
+                let model = match args.first() {
+                    Some(Value::Str(s)) => s.clone(),
+                    _ => return Ok(Value::Str("ollama_ask(model, prompt)".into())),
+                };
+                let prompt = match args.get(1) {
+                    Some(Value::Str(s)) => s.clone(),
+                    _ => return Ok(Value::Str("ollama_ask(model, prompt)".into())),
+                };
+                #[cfg(not(target_arch = "wasm32"))]
+                let v = {
+                    let body = format!(
+                        r#"{{"model":"{}","prompt":"{}","stream":false}}"#,
+                        model.replace('"', "\\\""),
+                        prompt.replace('"', "\\\"").replace('\n', "\\n")
+                    );
+                    match ureq::post("http://localhost:11434/api/generate")
+                        .set("Content-Type", "application/json")
+                        .send_string(&body)
+                    {
+                        Ok(resp) => {
+                            match resp.into_json::<serde_json::Value>() {
+                                Ok(j) => Value::Str(j["response"].as_str().unwrap_or("").trim().to_string()),
+                                Err(e) => Value::Str(format!("ollama parse error: {e}")),
+                            }
+                        }
+                        Err(e) => Value::Str(format!("ollama error: {e}")),
+                    }
+                };
+                #[cfg(target_arch = "wasm32")]
+                let v = Value::Str("ollama_ask not available in WASM".into());
+                v
+            }
+
+            "ollama_chat" => {
+                // ollama_chat(model, messages)  where messages = [{role,content}, ...]
+                let model = match args.first() {
+                    Some(Value::Str(s)) => s.clone(),
+                    _ => return Ok(Value::Str("ollama_chat(model, messages)".into())),
+                };
+                let messages_val = match args.get(1) {
+                    Some(v) => v.clone(),
+                    None => return Ok(Value::Str("ollama_chat(model, messages)".into())),
+                };
+                #[cfg(not(target_arch = "wasm32"))]
+                let v = {
+                    fn val_to_json(v: &Value) -> serde_json::Value {
+                        match v {
+                            Value::Str(s)    => serde_json::Value::String(s.clone()),
+                            Value::Number(n) => serde_json::json!(n),
+                            Value::Bool(b)   => serde_json::Value::Bool(*b),
+                            Value::Nil       => serde_json::Value::Null,
+                            Value::List(l)   => serde_json::Value::Array(l.borrow().iter().map(val_to_json).collect()),
+                            Value::Dict(d)   => {
+                                let mut map = serde_json::Map::new();
+                                for (k, v) in d.borrow().iter() { map.insert(k.clone(), val_to_json(v)); }
+                                serde_json::Value::Object(map)
+                            }
+                            _ => serde_json::Value::Null,
+                        }
+                    }
+                    let msgs_json = val_to_json(&messages_val);
+                    let body = serde_json::json!({
+                        "model": model,
+                        "messages": msgs_json,
+                        "stream": false
+                    });
+                    match ureq::post("http://localhost:11434/api/chat")
+                        .set("Content-Type", "application/json")
+                        .send_string(&body.to_string())
+                    {
+                        Ok(resp) => {
+                            match resp.into_json::<serde_json::Value>() {
+                                Ok(j) => Value::Str(
+                                    j["message"]["content"].as_str().unwrap_or("").trim().to_string()
+                                ),
+                                Err(e) => Value::Str(format!("ollama parse error: {e}")),
+                            }
+                        }
+                        Err(e) => Value::Str(format!("ollama error: {e}")),
+                    }
+                };
+                #[cfg(target_arch = "wasm32")]
+                let v = Value::Str("ollama_chat not available in WASM".into());
+                v
+            }
+
+            "ollama_models" => {
+                #[cfg(not(target_arch = "wasm32"))]
+                let v = {
+                    match ureq::get("http://localhost:11434/api/tags").call() {
+                        Ok(resp) => {
+                            match resp.into_json::<serde_json::Value>() {
+                                Ok(j) => {
+                                    let names: Vec<Value> = j["models"]
+                                        .as_array()
+                                        .unwrap_or(&vec![])
+                                        .iter()
+                                        .filter_map(|m| m["name"].as_str())
+                                        .map(|s| Value::Str(s.to_string()))
+                                        .collect();
+                                    make_list(names)
+                                }
+                                Err(e) => Value::Str(format!("ollama parse error: {e}")),
+                            }
+                        }
+                        Err(e) => Value::Str(format!("ollama error: {e}")),
+                    }
+                };
+                #[cfg(target_arch = "wasm32")]
+                let v = Value::Str("ollama_models not available in WASM".into());
+                v
+            }
+
             _ => return Err(args),
         };
         Ok(v)
