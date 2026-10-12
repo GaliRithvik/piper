@@ -118,8 +118,9 @@ class LinearModel:
     fn train_step(self, x, y_true, lr):
         let y_pred = self.predict(x)
         let error = y_pred - y_true
-        append(self.losses, error * error)
+        self.weights = vadd(self.weights, vscale(x, -lr * error))
         self.bias = self.bias - lr * error
+        return error * error
 
     fn loss_history(self):
         return self.losses
@@ -130,10 +131,14 @@ print("Initial weights: " + str([round(w, 3) for w in model.weights]))
 let X = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
 let y = [1.0, 2.0, 3.0]
 
-for i in 0..2:
-    model.train_step(X[i], y[i], 0.01)
+for epoch in 0..19:
+    let total = 0.0
+    for i in 0..2:
+        total = total + model.train_step(X[i], y[i], 0.005)
+    append(model.losses, total / 3)
 
-print("Loss history: " + str([round(l, 4) for l in model.loss_history()]))
+let hist = model.loss_history()
+print("Loss history (every 5 epochs): " + str([round(hist[e], 4) for e in [0, 4, 9, 14, 19]]))
 print("Type check: " + type(model))
 print("")
 
